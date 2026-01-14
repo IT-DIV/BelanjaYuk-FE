@@ -11,5 +11,5 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
     volumes:
-      - ./nginx-spa.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/nginx/spa-config.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
