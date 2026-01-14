@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  client-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: belanjayuk_client_prod
+    ports:
+      - "5007:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    restart: unless-stopped
