@@ -1,0 +1,439 @@
+@page "/register"
+
+<div class="register-container">
+    <div class="register-wrapper">
+        <div class="register-right">
+            <div class="register-form-container">
+                <div class="login-header">
+                    <div class="logo">
+                        <span class="logo-icon">🛒</span>
+                        <span class="logo-text">BelanjaYuk</span>
+                    </div>
+                    <h1 class="text-welcome">Buat akun baru</h1>
+                    <p class="text-desc">Isi data di bawah untuk mulai belanja di BelanjaYuk</p>
+                </div>
+
+                <form class="register-form" @onsubmit="HandleRegister">
+                    <div class="form-group">
+                        <label for="fullname">Nama Lengkap</label>
+                        <input
+                            type="text"
+                            id="fullname"
+                            placeholder="belanjayuk_user"
+                            @bind="fullname"
+                            @bind:event="oninput"
+                            class="form-input @(errors.ContainsKey("fullname") ? "error" : "")" />
+                        @if (errors.ContainsKey("fullname"))
+                        {
+                            <span class="error-message">@errors["fullname"]</span>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label for="identityName">Nama sesuai Identitas</label>
+                        <input
+                            type="text"
+                            id="identityName"
+                            @bind="identityName"
+                            @bind:event="oninput"
+                            class="form-input @(errors.ContainsKey("identityName") ? "error" : "")" />
+                        @if (errors.ContainsKey("identityName"))
+                        {
+                            <span class="error-message">@errors["identityName"]</span>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input
+                            type="text"
+                            id="username"
+                            placeholder="belanjayuk_user"
+                            @bind="username"
+                            @bind:event="oninput"
+                            class="form-input @(errors.ContainsKey("username") ? "error" : "")" />
+                        @if (errors.ContainsKey("username"))
+                        {
+                            <span class="error-message">@errors["username"]</span>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input
+                            type="email"
+                            id="email"
+                            placeholder="contoh@gmail.com"
+                            @bind="email"
+                            @bind:event="oninput"
+                            class="form-input @(errors.ContainsKey("email") ? "error" : "")" />
+                        @if (errors.ContainsKey("email"))
+                        {
+                            <span class="error-message">@errors["email"]</span>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">No. HP</label>
+                        <input
+                            type="tel"
+                            id="phone"
+                            placeholder="08xxxx / +62xxx"
+                            @bind="phone"
+                            @bind:event="oninput"
+                            class="form-input @(errors.ContainsKey("phone") ? "error" : "")" />
+                        @if (errors.ContainsKey("phone"))
+                        {
+                            <span class="error-message">@errors["phone"]</span>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gender">Jenis Kelamin</label>
+                        <select id="gender" @bind="gender" class="form-input @(errors.ContainsKey("gender") ? "error" : "")">
+                            <option value="">Pilih</option>
+                            <option value="Pria">Pria</option>
+                            <option value="Wanita">Wanita</option>
+                        </select>
+                        @if (errors.ContainsKey("gender"))
+                        {
+                            <span class="error-message">@errors["gender"]</span>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Kata Sandi</label>
+                        <input
+                            type="password"
+                            id="password"
+                            placeholder="Minimal 8 karakter"
+                            @bind="password"
+                            @bind:event="oninput"
+                            class="form-input @(errors.ContainsKey("password") ? "error" : "")" />
+                        @if (errors.ContainsKey("password"))
+                        {
+                            <span class="error-message">@errors["password"]</span>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword">Konfirmasi Sandi</label>
+                        <input
+                            type="password"
+                            id="confirmPassword"
+                            placeholder="Ulang sandi"
+                            @bind="confirmPassword"
+                            @bind:event="oninput"
+                            class="form-input @(errors.ContainsKey("confirmPassword") ? "error" : "")" />
+                        @if (errors.ContainsKey("confirmPassword"))
+                        {
+                            <span class="error-message">@errors["confirmPassword"]</span>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label for="birthdate">Tanggal Lahir</label>
+                        <input
+                            type="date"
+                            id="birthdate"
+                            @bind="birthdate"
+                            class="form-input @(errors.ContainsKey("birthdate") ? "error" : "")" />
+                        @if (errors.ContainsKey("birthdate"))
+                        {
+                            <span class="error-message">@errors["birthdate"]</span>
+                        }
+                    </div>
+
+                    <div class="address-section full-width">
+                        <div class="address-toggle" @onclick="ToggleAddress">
+                            <span class="toggle-icon">@(showAddress ? "▼" : "▶")</span>
+                            <span>Tambahkan alamat utama (opsional)</span>
+                        </div>
+
+                        @if (showAddress)
+                        {
+                            <div class="address-fields">
+                                <div class="form-group">
+                                    <label for="province">Provinsi</label>
+                                    <input
+                                        type="text"
+                                        id="province"
+                                        placeholder="Banten"
+                                        @bind="province"
+                                        @bind:event="oninput"
+                                        class="form-input @(errors.ContainsKey("province") ? "error" : "")" />
+                                    @if (errors.ContainsKey("province"))
+                                    {
+                                        <span class="error-message">@errors["province"]</span>
+                                    }
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="city">Kota/Kabupaten</label>
+                                    <input
+                                        type="text"
+                                        id="city"
+                                        placeholder="Tangerang Kota"
+                                        @bind="city"
+                                        @bind:event="oninput"
+                                        class="form-input @(errors.ContainsKey("city") ? "error" : "")" />
+                                    @if (errors.ContainsKey("city"))
+                                    {
+                                        <span class="error-message">@errors["city"]</span>
+                                    }
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="district">Kecamatan</label>
+                                    <input
+                                        type="text"
+                                        id="district"
+                                        placeholder="Tangerang"
+                                        @bind="district"
+                                        @bind:event="oninput"
+                                        class="form-input @(errors.ContainsKey("district") ? "error" : "")" />
+                                    @if (errors.ContainsKey("district"))
+                                    {
+                                        <span class="error-message">@errors["district"]</span>
+                                    }
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="postalCode">Kode Pos</label>
+                                    <input
+                                        type="text"
+                                        id="postalCode"
+                                        placeholder="13111"
+                                        @bind="postalCode"
+                                        @bind:event="oninput"
+                                        class="form-input @(errors.ContainsKey("postalCode") ? "error" : "")" />
+                                    @if (errors.ContainsKey("postalCode"))
+                                    {
+                                        <span class="error-message">@errors["postalCode"]</span>
+                                    }
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="fullAddress">Alamat Lengkap</label>
+                                    <input
+                                        type="text"
+                                        id="fullAddress"
+                                        placeholder="Jalan Tangerang Cahaya Blok B nomor 9"
+                                        @bind="fullAddress"
+                                        @bind:event="oninput"
+                                        class="form-input @(errors.ContainsKey("fullAddress") ? "error" : "")" />
+                                    @if (errors.ContainsKey("fullAddress"))
+                                    {
+                                        <span class="error-message">@errors["fullAddress"]</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <label class="checkbox-label">
+                        <input type="checkbox" @bind="agreePrivacy" />
+                        <span>Setuju dengan Syarat & Ketentuan Privasi</span>
+                    </label>
+
+                    <button type="submit" class="btn-login">Buat Akun</button>
+
+                    <p class="register-prompt">
+                        Sudah punya akun? <a href="/login">Masuk</a>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string fullname = "";
+    private string identityName = "";
+    private string username = "";
+    private string email = "";
+    private string phone = "";
+    private string gender = "";
+    private string password = "";
+    private string confirmPassword = "";
+    private DateTime? birthdate;
+    private bool showAddress = false;
+    private string province = "";
+    private string city = "";
+    private string district = "";
+    private string postalCode = "";
+    private string fullAddress = "";
+    private bool agreePrivacy = false;
+    private Dictionary<string, string> errors = new Dictionary<string, string>();
+
+    private void ToggleAddress()
+    {
+        showAddress = !showAddress;
+    }
+
+    private bool ValidateForm()
+    {
+        errors.Clear();
+        bool isValid = true;
+
+        // Validate Nama Lengkap
+        if (string.IsNullOrWhiteSpace(fullname))
+        {
+            errors["fullname"] = "Nama wajib diisi.";
+            isValid = false;
+        }
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(fullname, @"^[a-zA-Z\s]+$"))
+        {
+            errors["fullname"] = "Nama hanya boleh huruf dan spasi.";
+            isValid = false;
+        }
+
+        // Validate Nama sesuai Identitas
+        if (string.IsNullOrWhiteSpace(identityName))
+        {
+            errors["identityName"] = "Nama sesuai identitas wajib diisi.";
+            isValid = false;
+        }
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(identityName, @"^[a-zA-Z\s]+$"))
+        {
+            errors["identityName"] = "Nama hanya boleh huruf dan spasi.";
+            isValid = false;
+        }
+
+        // Validate Username
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            errors["username"] = "Username wajib diisi.";
+            isValid = false;
+        }
+        else if (username.Length < 5 || username.Length > 30)
+        {
+            errors["username"] = "Username harus 5-30 karakter.";
+            isValid = false;
+        }
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(username, @"^[a-z0-9_]+$"))
+        {
+            errors["username"] = "Gunakan huruf kecil dan angka saja.";
+            isValid = false;
+        }
+
+        // Validate Email
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            errors["email"] = "Email wajib diisi.";
+            isValid = false;
+        }
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+        {
+            errors["email"] = "Format email tidak valid.";
+            isValid = false;
+        }
+
+        // Validate Phone
+        if (string.IsNullOrWhiteSpace(phone))
+        {
+            errors["phone"] = "Nomor HP wajib diisi.";
+            isValid = false;
+        }
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(phone, @"^(08|\+628)\d{8,11}$"))
+        {
+            errors["phone"] = "Nomor HP tidak valid.";
+            isValid = false;
+        }
+
+        // Validate Gender
+        if (string.IsNullOrWhiteSpace(gender))
+        {
+            errors["gender"] = "Jenis kelamin wajib dipilih.";
+            isValid = false;
+        }
+
+        // Validate Password
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            errors["password"] = "Kata sandi wajib diisi.";
+            isValid = false;
+        }
+        else if (password.Length < 8 || !System.Text.RegularExpressions.Regex.IsMatch(password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$"))
+        {
+            errors["password"] = "Kata sandi minimal 8 karakter dan kombinasi huruf besar, kecil, angka.";
+            isValid = false;
+        }
+
+        // Validate Confirm Password
+        if (string.IsNullOrWhiteSpace(confirmPassword))
+        {
+            errors["confirmPassword"] = "Konfirmasi sandi wajib diisi.";
+            isValid = false;
+        }
+        else if (password != confirmPassword)
+        {
+            errors["confirmPassword"] = "Kata sandi tidak sama.";
+            isValid = false;
+        }
+
+        // Validate Birthdate
+        if (!birthdate.HasValue)
+        {
+            errors["birthdate"] = "Tanggal lahir wajib diisi.";
+            isValid = false;
+        }
+        else
+        {
+            var age = DateTime.Now.Year - birthdate.Value.Year;
+            if (birthdate.Value > DateTime.Now.AddYears(-age)) age--;
+
+            if (age < 13)
+            {
+                errors["birthdate"] = "Minimal umur 13 tahun.";
+                isValid = false;
+            }
+        }
+
+        // Validate Address (if filled)
+        if (showAddress && (!string.IsNullOrWhiteSpace(province) || !string.IsNullOrWhiteSpace(city) ||
+            !string.IsNullOrWhiteSpace(district) || !string.IsNullOrWhiteSpace(postalCode) ||
+            !string.IsNullOrWhiteSpace(fullAddress)))
+        {
+            if (string.IsNullOrWhiteSpace(province))
+            {
+                errors["province"] = "Provinsi wajib diisi.";
+                isValid = false;
+            }
+
+            if (string.IsNullOrWhiteSpace(city))
+            {
+                errors["city"] = "Kota/Kabupaten wajib diisi.";
+                isValid = false;
+            }
+
+            if (string.IsNullOrWhiteSpace(district))
+            {
+                errors["district"] = "Kecamatan wajib diisi.";
+                isValid = false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(postalCode) && !System.Text.RegularExpressions.Regex.IsMatch(postalCode, @"^\d{5}$"))
+            {
+                errors["postalCode"] = "Kode pos tidak valid.";
+                isValid = false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(fullAddress) && fullAddress.Length < 10)
+            {
+                errors["fullAddress"] = "Alamat minimal 10 karakter.";
+                isValid = false;
+            }
+        }
+
+        return isValid;
+    }
+
+    private void HandleRegister()
+    {
+        if (ValidateForm())
+        {
+            Console.WriteLine("Form valid - ready to submit");
+        }
+    }
+}
