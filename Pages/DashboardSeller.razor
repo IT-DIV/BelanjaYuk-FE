@@ -1,0 +1,307 @@
+@page "/dashboard-seller"
+@using BelanjaYuk.Client.Services
+@using BelanjaYuk.Client.Models.Response
+@using BelanjaYuk.Client.Components.Common
+@using BelanjaYuk.Client.Components.Icon
+@using Microsoft.Extensions.Configuration
+@inject AuthService AuthService
+@inject SellerService SellerService
+@inject ProductService ProductService
+@inject NavigationManager Navigation
+@inject IConfiguration Configuration
+
+<link rel="stylesheet" href="css/dashboard-seller.css" />
+
+<NavBarV2 />
+
+<div class="dashboard-container">
+    <div class="seller-card">
+        <div class="seller-avatar">@GetInitials()</div>
+        <div class="seller-info">
+            <h2 class="seller-name">@storeName</h2>
+            <div class="seller-details">
+                <span class="seller-id">ID Toko: #@storeCode</span>
+                <span class="separator">•</span>
+                <span class="seller-year">Bergabung: @joinYear</span>
+            </div>
+        </div>
+        <button class="btn-add-product" @onclick="HandleAddProduct">Tambah Barang</button>
+    </div>
+
+    <div class="search-section">
+        <div class="search-container">
+            <input
+                type="text"
+                class="search-input"
+                placeholder="Cari produk toko..."
+                @bind="searchQuery"
+                @onkeyup="HandleSearchKeyPress" />
+        </div>
+        <div class="total-products">Total produk: @products.Count</div>
+    </div>
+
+    <div class="products-table-container">
+        @if (isLoading)
+        {
+            <div class="empty-state">Memuat produk...</div>
+        }
+        else if (products.Count == 0)
+        {
+            <div class="empty-state">Belum ada produk.</div>
+        }
+        else
+        {
+            <table class="products-table">
+                <thead>
+                    <tr>
+                        <th>Produk</th>
+                        <th>Harga</th>
+                        <th>Stok</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var product in products)
+                    {
+                        <tr>
+                            <td class="product-cell">
+                                @if (product.Images != null && product.Images.Count > 0)
+                                {
+                                    <div class="product-image">
+                                        <img src="@GetImageUrl(product.Images[0])" alt="@product.ProductName" />
+                                    </div>
+                                }
+                                <div class="product-info-cell">
+                                    <div class="product-name-cell">@product.ProductName</div>
+                                    <div class="product-id">#@(products.IndexOf(product) + 1)</div>
+                                </div>
+                            </td>
+                            <td class="price-cell">
+                                <div class="price-current">Rp @product.PriceAfterDiscount.ToString("N0")</div>
+                            </td>
+                            <td class="stock-cell">
+                                <span class="stock-badge @(product.Qty < 5 ? "low-stock" : "")">@product.Qty</span>
+                            </td>
+                            <td class="action-cell">
+                                <div>
+                                    <button class="btn-icon btn-edit" @onclick="() => HandleEditProduct(product.IdProduct)" title="Edit">
+                                        <PencilIcon Width="18" Height="17" Color="currentColor" />
+                                    </button>
+                                    <button class="btn-icon btn-delete" @onclick="() => HandleDeleteProduct(product.IdProduct)" title="Hapus">
+                                        <TrashIcon Width="16" Height="18" Color="currentColor" />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<AddProductModal IsOpen="showAddModal"
+                 UserId="@userId"
+                 OnClose="CloseAddModal"
+                 OnProductAdded="HandleProductAdded" />
+
+<EditProductModal IsOpen="showEditModal"
+                  UserId="@userId"
+                  ProductId="@selectedProductId"
+                  OnClose="CloseEditModal"
+                  OnProductUpdated="HandleProductUpdated" />
+
+@if (showDeleteConfirm)
+{
+    <div class="modal-overlay" @onclick="CloseDeleteConfirm">
+        <div class="delete-confirm-modal" @onclick:stopPropagation="true">
+            <h3>Hapus Produk?</h3>
+            <p>Apakah Anda yakin ingin menghapus produk ini? Produk yang dihapus tidak akan muncul lagi di daftar.</p>
+            <div class="delete-confirm-buttons">
+                <button class="btn-cancel" @onclick="CloseDeleteConfirm" disabled="@isDeleting">Batal</button>
+                <button class="btn-delete-confirm" @onclick="ConfirmDelete" disabled="@isDeleting">
+                    @if (isDeleting)
+                    {
+                        <span>Menghapus...</span>
+                    }
+                    else
+                    {
+                        <span>Hapus</span>
+                    }
+                </button>
+            </div>
+            @if (!string.IsNullOrEmpty(deleteErrorMessage))
+            {
+                <div class="error-message">@deleteErrorMessage</div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private string userId = "";
+    private string storeName = "";
+    private string storeCode = "";
+    private string joinYear = "";
+    private string searchQuery = "";
+    private List<MyProductResponse> products = new List<MyProductResponse>();
+    private bool isLoading = true;
+    private System.Threading.Timer? searchTimer;
+    private bool showAddModal = false;
+    private bool showEditModal = false;
+    private bool showDeleteConfirm = false;
+    private string selectedProductId = "";
+    private bool isDeleting = false;
+    private string deleteErrorMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check authentication
+        if (!await AuthService.IsAuthenticatedAsync())
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        // Get user profile
+        var currentUser = await AuthService.GetCurrentUserAsync();
+        if (currentUser == null)
+        {
+            await AuthService.RemoveTokenAsync();
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        userId = currentUser.IdUser;
+
+        // Check if user is seller
+        if (currentUser.StoreName == null)
+        {
+            Navigation.NavigateTo("/register-seller");
+            return;
+        }
+
+        storeName = currentUser.StoreName;
+        storeCode = "S-10293"; 
+        joinYear = "2025"; 
+
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        isLoading = true;
+        products = await SellerService.GetMyProductsAsync(userId, searchQuery);
+        isLoading = false;
+    }
+
+    private async Task HandleSearchKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await LoadProducts();
+            return;
+        }
+
+        // Debounce search
+        searchTimer?.Dispose();
+        searchTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await LoadProducts();
+                StateHasChanged();
+            });
+        }, null, 500, System.Threading.Timeout.Infinite);
+    }
+
+    private void HandleAddProduct()
+    {
+        showAddModal = true;
+    }
+
+    private void CloseAddModal()
+    {
+        showAddModal = false;
+    }
+
+    private async Task HandleProductAdded()
+    {
+        await LoadProducts();
+    }
+
+    private void HandleEditProduct(string productId)
+    {
+        selectedProductId = productId;
+        showEditModal = true;
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+        selectedProductId = "";
+    }
+
+    private async Task HandleProductUpdated()
+    {
+        await LoadProducts();
+    }
+
+    private void HandleDeleteProduct(string productId)
+    {
+        selectedProductId = productId;
+        showDeleteConfirm = true;
+    }
+
+    private void CloseDeleteConfirm()
+    {
+        if (!isDeleting)
+        {
+            showDeleteConfirm = false;
+            selectedProductId = "";
+            deleteErrorMessage = "";
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        isDeleting = true;
+        deleteErrorMessage = "";
+
+        var result = await ProductService.DeleteProductAsync(userId, selectedProductId);
+
+        isDeleting = false;
+
+        if (result.Success)
+        {
+            showDeleteConfirm = false;
+            selectedProductId = "";
+            await LoadProducts();
+        }
+        else
+        {
+            deleteErrorMessage = result.Message;
+        }
+    }
+
+    private string GetInitials()
+    {
+        if (string.IsNullOrEmpty(storeName)) return "TM";
+
+        var words = storeName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 0) return "TM";
+
+        if (words.Length == 1)
+        {
+            return storeName.Substring(0, Math.Min(2, storeName.Length)).ToUpper();
+        }
+
+        return (words[0][0].ToString() + words[1][0].ToString()).ToUpper();
+    }
+
+    private string GetImageUrl(string imagePath)
+    {
+        var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://api-dev.drian.my.id";
+        return $"{apiBaseUrl}{imagePath}";
+    }
+}

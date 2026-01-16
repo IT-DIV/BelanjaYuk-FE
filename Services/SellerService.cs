@@ -76,4 +76,43 @@ public class SellerService
             };
         }
     }
+
+    public async Task<List<MyProductResponse>> GetMyProductsAsync(string userId, string searchQuery = "")
+    {
+        try
+        {
+            // Set Authorization header
+            var token = await _authService.GetTokenAsync();
+            if (!string.IsNullOrEmpty(token))
+            {
+                _httpClient.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+
+            var url = $"/api/v1/seller/my-products/{userId}";
+
+            if (!string.IsNullOrWhiteSpace(searchQuery) && searchQuery.Length >= 2)
+            {
+                url += $"?searchQuery={Uri.EscapeDataString(searchQuery)}";
+            }
+
+            var response = await _httpClient.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var result = System.Text.Json.JsonSerializer.Deserialize<List<MyProductResponse>>(json, new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                return result ?? new List<MyProductResponse>();
+            }
+
+            return new List<MyProductResponse>();
+        }
+        catch
+        {
+            return new List<MyProductResponse>();
+        }
+    }
 }

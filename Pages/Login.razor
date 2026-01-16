@@ -1,6 +1,7 @@
 @page "/login"
 @using BelanjaYuk.Client.Services
 @using BelanjaYuk.Client.Models.Request
+@using BelanjaYuk.Client.Components.Icon
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 
@@ -50,11 +51,21 @@
                         <label for="password">Kata Sandi</label>
                         <div class="password-input-wrapper">
                             <input
-                                type="password"
+                                type="@(showPassword ? "text" : "password")"
                                 id="password"
                                 placeholder="••••••••"
                                 @bind="password"
-                                class="form-input" />
+                                class="form-input password-input" />
+                            <button type="button" class="btn-toggle-password" @onclick="TogglePasswordVisibility">
+                                @if (showPassword)
+                                {
+                                    <EyeOffIcon Width="20" Height="20" Color="#6b7280" />
+                                }
+                                else
+                                {
+                                    <EyeIcon Width="20" Height="20" Color="#6b7280" />
+                                }
+                            </button>
                         </div>
                     </div>
 
@@ -107,6 +118,7 @@
     private bool rememberMe = false;
     private bool isSubmitting = false;
     private string errorMessage = "";
+    private bool showPassword = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -171,5 +183,10 @@
     private void ContinueWithoutAccount()
     {
         Navigation.NavigateTo("/");
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        showPassword = !showPassword;
     }
 }

@@ -1,0 +1,107 @@
+@if (IsOpen)
+{
+    <div class="modal-overlay" @onclick="HandleClose">
+        <div class="add-to-cart-modal" @onclick:stopPropagation="true">
+            <h3>Tambah ke Keranjang</h3>
+            <p class="modal-subtitle">Pilih jumlah barang yang ingin ditambahkan</p>
+
+            <div class="quantity-input-group">
+                <label>Jumlah</label>
+                <div class="quantity-controls">
+                    <button type="button" class="btn-quantity" @onclick="DecreaseQuantity" disabled="@(quantity <= 1)">-</button>
+                    <input type="number"
+                           class="input-quantity"
+                           @bind="quantity"
+                           @bind:event="oninput"
+                           min="1"
+                           max="99" />
+                    <button type="button" class="btn-quantity" @onclick="IncreaseQuantity" disabled="@(quantity >= 99)">+</button>
+                </div>
+                <small>Minimal 1, maksimal 99</small>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="modal-error">@errorMessage</div>
+            }
+
+            <div class="modal-actions">
+                <button class="btn-cancel-modal" @onclick="HandleClose" disabled="@isSubmitting">Batal</button>
+                <button class="btn-confirm-modal" @onclick="HandleConfirm" disabled="@isSubmitting">
+                    @if (isSubmitting)
+                    {
+                        <span>Menambahkan...</span>
+                    }
+                    else
+                    {
+                        <span>OK</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnConfirm { get; set; }
+
+    private int quantity = 1;
+    private bool isSubmitting = false;
+    private string errorMessage = "";
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen)
+        {
+            quantity = 1;
+            errorMessage = "";
+            isSubmitting = false;
+        }
+    }
+
+    private void IncreaseQuantity()
+    {
+        if (quantity < 99)
+        {
+            quantity++;
+        }
+    }
+
+    private void DecreaseQuantity()
+    {
+        if (quantity > 1)
+        {
+            quantity--;
+        }
+    }
+
+    private async Task HandleClose()
+    {
+        if (!isSubmitting)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+
+    private async Task HandleConfirm()
+    {
+        errorMessage = "";
+
+        if (quantity < 1 || quantity > 99)
+        {
+            errorMessage = "Jumlah harus antara 1-99";
+            return;
+        }
+
+        isSubmitting = true;
+        await OnConfirm.InvokeAsync(quantity);
+        isSubmitting = false;
+    }
+}

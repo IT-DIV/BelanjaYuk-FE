@@ -24,4 +24,7 @@ public class ProductResponse
 
     [JsonPropertyName("avgRating")]
     public decimal AvgRating { get; set; }
+
+    [JsonPropertyName("images")]
+    public List<string> Images { get; set; } = new List<string>();
 }

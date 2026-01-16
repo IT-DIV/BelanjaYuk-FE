@@ -1,0 +1,315 @@
+@using BelanjaYuk.Client.Services
+@using BelanjaYuk.Client.Models.Request
+@using BelanjaYuk.Client.Models.Response
+@inject ProductService ProductService
+@inject CategoryService CategoryService
+@inject SellerService SellerService
+
+<link rel="stylesheet" href="css/add-product-modal.css" />
+
+@if (IsOpen)
+{
+    <div class="modal-overlay" @onclick="HandleClose">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h2>Edit Barang</h2>
+                <button class="close-button" @onclick="HandleClose">×</button>
+            </div>
+
+            <div class="modal-body">
+                @if (isLoadingProduct)
+                {
+                    <div style="text-align: center; padding: 40px; color: #6b7280;">Memuat data produk...</div>
+                }
+                else
+                {
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nama Barang</label>
+                            <input type="text"
+                                   class="form-input"
+                                   placeholder="Contoh: Headset Bluetooth ZX"
+                                   @bind="productName" />
+                        </div>
+                        <div class="form-group">
+                            <label>Kategori Barang</label>
+                            <select class="form-input" @bind="categoryId">
+                                <option value="">-- Pilih Kategori --</option>
+                                @foreach (var category in categories)
+                                {
+                                    <option value="@category.IdCategory">@category.CategoryName</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Deskripsi Barang</label>
+                        <textarea class="form-textarea"
+                                  placeholder="Tuliskan detail produk, fitur, bahan, ukuran, garansi, dsb."
+                                  rows="4"
+                                  @bind="description"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Harga (IDR)</label>
+                            <input type="number"
+                                   class="form-input"
+                                   placeholder="289000"
+                                   @bind="price" />
+                        </div>
+                        <div class="form-group">
+                            <label>Diskon (%)</label>
+                            <input type="number"
+                                   class="form-input"
+                                   placeholder="0"
+                                   min="0"
+                                   max="100"
+                                   @bind="discount" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Stok</label>
+                            <input type="number"
+                                   class="form-input"
+                                   placeholder="10"
+                                   min="0"
+                                   @bind="stock" />
+                        </div>
+                        <div class="form-group">
+                            <label>Harga Setelah Diskon</label>
+                            <input type="text"
+                                   class="form-input disabled"
+                                   value="@CalculateFinalPrice()"
+                                   disabled />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tambah Foto Produk (opsional)</label>
+                        <InputFile OnChange="HandleFileChange"
+                                   class="form-file"
+                                   multiple
+                                   accept="image/jpeg,image/png" />
+                        <small class="file-hint">Format: JPG/PNG, maksimal 10 foto. @(selectedImages.Count) foto dipilih untuk ditambahkan.</small>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="error-message">@errorMessage</div>
+                    }
+                }
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-reset" @onclick="HandleClose" disabled="@(isSubmitting || isLoadingProduct)">Batal</button>
+                <button class="btn-submit" @onclick="HandleSubmit" disabled="@(isSubmitting || isLoadingProduct)">
+                    @if (isSubmitting)
+                    {
+                        <span>Menyimpan...</span>
+                    }
+                    else
+                    {
+                        <span>Update</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback OnProductUpdated { get; set; }
+
+    [Parameter]
+    public string UserId { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ProductId { get; set; } = string.Empty;
+
+    private string productName = "";
+    private string categoryId = "";
+    private string description = "";
+    private decimal price = 0;
+    private decimal discount = 0;
+    private int stock = 0;
+    private string errorMessage = "";
+    private bool isSubmitting = false;
+    private bool isLoadingProduct = false;
+    private List<IBrowserFile> selectedImages = new List<IBrowserFile>();
+
+    private List<CategoryResponse> categories = new List<CategoryResponse>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await CategoryService.GetCategoriesAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen && !string.IsNullOrEmpty(ProductId))
+        {
+            await LoadProductData();
+        }
+    }
+
+    private async Task LoadProductData()
+    {
+        isLoadingProduct = true;
+        errorMessage = "";
+
+        try
+        {
+            var products = await SellerService.GetMyProductsAsync(UserId, "");
+            var product = products.FirstOrDefault(p => p.IdProduct == ProductId);
+
+            if (product != null)
+            {
+                productName = product.ProductName;
+                categoryId = ""; // We don't have category ID in MyProductResponse
+                description = ""; // We don't have description in MyProductResponse
+                price = product.Price;
+                discount = product.DiscountProduct;
+                stock = product.Qty;
+            }
+            else
+            {
+                errorMessage = "Produk tidak ditemukan";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Gagal memuat data produk: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingProduct = false;
+        }
+    }
+
+    private string CalculateFinalPrice()
+    {
+        if (price <= 0) return "—";
+
+        var finalPrice = price - (price * discount / 100);
+        return finalPrice.ToString("N0");
+    }
+
+    private async Task HandleFileChange(InputFileChangeEventArgs e)
+    {
+        selectedImages.Clear();
+
+        // Get all selected files (up to 10 files)
+        var files = e.GetMultipleFiles(10);
+
+        foreach (var file in files)
+        {
+            // Validate file type
+            if (file.ContentType == "image/jpeg" || file.ContentType == "image/png")
+            {
+                selectedImages.Add(file);
+            }
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task HandleSubmit()
+    {
+        errorMessage = "";
+
+        // Validation
+        if (string.IsNullOrWhiteSpace(productName))
+        {
+            errorMessage = "Nama barang harus diisi";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(categoryId))
+        {
+            errorMessage = "Kategori barang harus dipilih";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            errorMessage = "Deskripsi barang harus diisi";
+            return;
+        }
+
+        if (price <= 0)
+        {
+            errorMessage = "Harga harus lebih dari 0";
+            return;
+        }
+
+        if (stock < 0)
+        {
+            errorMessage = "Stok tidak boleh negatif";
+            return;
+        }
+
+        if (discount < 0 || discount > 100)
+        {
+            errorMessage = "Diskon harus antara 0-100%";
+            return;
+        }
+
+        isSubmitting = true;
+
+        var result = await ProductService.UpdateProductAsync(
+            ProductId,
+            UserId,
+            productName,
+            description,
+            categoryId,
+            price,
+            discount,
+            stock,
+            selectedImages.Count > 0 ? selectedImages : null);
+
+        isSubmitting = false;
+
+        if (result.Success)
+        {
+            await OnProductUpdated.InvokeAsync();
+            HandleReset();
+            await HandleClose();
+        }
+        else
+        {
+            errorMessage = result.Message;
+        }
+    }
+
+    private void HandleReset()
+    {
+        productName = "";
+        categoryId = "";
+        description = "";
+        price = 0;
+        discount = 0;
+        stock = 0;
+        selectedImages.Clear();
+        errorMessage = "";
+    }
+
+    private async Task HandleClose()
+    {
+        if (!isSubmitting)
+        {
+            HandleReset();
+            await OnClose.InvokeAsync();
+        }
+    }
+}
