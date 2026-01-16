@@ -1,0 +1,239 @@
+.register-container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 10px;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.register-wrapper {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  min-width: 1200px;
+  max-width: 1200px;
+  max-height: 580px;
+  -webkit-border-radius: 10px;
+  -moz-border-radius: 10px;
+  -ms-border-radius: 10px;
+  -o-border-radius: 10px;
+}
+
+.register-right {
+  flex: 1;
+  padding: 18px 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 580px;
+}
+
+.register-form-container {
+  width: 100%;
+  max-width: 1180px;
+}
+
+.register-form {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px 8px;
+}
+
+.register-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.register-form .form-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.register-form .form-group input,
+.register-form .form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.register-form .form-group input:focus,
+.register-form .form-group select:focus {
+  border-color: #3b82f6;
+}
+
+.register-form .form-group input.error,
+.register-form .form-group select.error {
+  border-color: #ef4444;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 11px;
+  margin-top: 2px;
+  display: block;
+}
+
+.api-error {
+  grid-column: 1 / -1;
+  background-color: #fee2e2;
+  border: 1px solid #ef4444;
+  color: #991b1b;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.btn-login:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.register-form .form-group.span-2 {
+  grid-column: span 2;
+}
+
+.register-form .form-group.span-3 {
+  grid-column: span 3;
+}
+
+.register-form .form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.register-form .checkbox-label {
+  font-size: 13px;
+  margin-bottom: 0;
+  grid-column: 1 / -1;
+}
+
+.address-section {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 3px;
+  grid-column: 1 / -1;
+}
+
+.address-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #374151;
+  user-select: none;
+}
+
+.toggle-icon {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.address-fields {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px 8px;
+  margin-top: 8px;
+}
+
+.address-fields .form-group.span-2 {
+  grid-column: span 2;
+}
+
+.address-fields .form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.register-form .btn-login {
+  grid-column: 1 / -1;
+}
+
+.register-form .register-prompt {
+  grid-column: 1 / -1;
+  text-align: center;
+}
+
+@media (max-width: 1280px) {
+  .register-wrapper {
+    min-width: auto;
+    max-width: 100%;
+  }
+
+  .register-form-container {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 968px) {
+  .register-wrapper {
+    flex-direction: column;
+    max-height: none;
+  }
+
+  .register-right {
+    padding: 30px 20px;
+    max-height: none;
+  }
+
+  .register-form {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .address-fields {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .register-container {
+    padding: 10px;
+  }
+
+  .register-wrapper {
+    border-radius: 15px;
+    min-width: auto;
+  }
+
+  .register-right {
+    padding: 20px 15px;
+  }
+
+  .register-form {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .address-fields {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .register-form .form-group label {
+    font-size: 12px;
+  }
+
+  .register-form .form-group input,
+  .register-form .form-group select {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .address-section {
+    padding: 8px;
+  }
+
+  .address-toggle {
+    font-size: 12px;
+  }
+}

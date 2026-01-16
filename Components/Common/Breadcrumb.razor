@@ -1,0 +1,17 @@
+@using BelanjaYuk.Client.Components.Icon
+
+<div class="breadcrumb">
+    @for (int i = 0; i < Items.Count; i++)
+    {
+        <span class="breadcrumb-item">@Items[i]</span>
+        @if (i < Items.Count - 1)
+        {
+            <ChevronRightIcon Width="8" Height="14" Color="#9ca3af" />
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public List<string> Items { get; set; } = new List<string>();
+}

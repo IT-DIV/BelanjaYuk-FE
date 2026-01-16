@@ -1,0 +1,103 @@
+@using BelanjaYuk.Client.Services
+@using BelanjaYuk.Client.Components.Icon
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<link rel="stylesheet" href="css/homepage.css" />
+
+<div class="navbar">
+    <div class="navbar-container">
+        <a href="/" class="navbar-logo">
+            <span>BelanjaYuk</span>
+        </a>
+
+        <div class="search-bar">
+            <input
+                type="text"
+                class="search-input"
+                placeholder="Cari barang apa? (misal: sepatu, headset, kopi)"
+                @bind="searchQuery"
+                @onkeyup="HandleSearch" />
+            <button class="btn-cart-in-search">Cart</button>
+        </div>
+
+        <div class="navbar-actions">
+
+            @if (isAuthenticated)
+            {
+                @if (!string.IsNullOrEmpty(storeName))
+                {
+                    <a href="/dashboard-seller" class="btn-seller">@storeName</a>
+                }
+                else
+                {
+                    <a href="/register-seller" class="btn-seller">Daftar Jadi Seller</a>
+                }
+
+                <div class="user-menu-wrapper">
+                    <button class="btn-user" @onclick="ToggleUserMenu">@username</button>
+                    @if (showUserMenu)
+                    {
+                        <div class="user-dropdown">
+                            <button class="dropdown-item" @onclick="HandleLogout">
+                                <LogoutIcon /> Logout
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <a href="/login" class="btn-user">Login</a>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string SearchQuery { get; set; } = "";
+
+    [Parameter]
+    public EventCallback<string> OnSearchChanged { get; set; }
+
+    private bool isAuthenticated = false;
+    private string username = "";
+    private string storeName = "";
+    private string searchQuery = "";
+    private bool showUserMenu = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAuthenticated = await AuthService.IsAuthenticatedAsync();
+
+        if (isAuthenticated)
+        {
+            var currentUser = await AuthService.GetCurrentUserAsync();
+            if (currentUser != null)
+            {
+                username = currentUser.Username;
+                storeName = currentUser.StoreName ?? "";
+            }
+        }
+
+        searchQuery = SearchQuery;
+    }
+
+    private async Task HandleSearch(KeyboardEventArgs e)
+    {
+        await OnSearchChanged.InvokeAsync(searchQuery);
+    }
+
+    private void ToggleUserMenu()
+    {
+        showUserMenu = !showUserMenu;
+    }
+
+    private async void HandleLogout()
+    {
+        showUserMenu = false;
+        await AuthService.RemoveTokenAsync();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}

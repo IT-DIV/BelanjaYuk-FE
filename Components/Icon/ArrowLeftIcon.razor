@@ -1,0 +1,22 @@
+<svg
+    width="@Width"
+    height="@Height"
+    viewBox="0 0 18 14"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style="display: inline-block; vertical-align: middle;">
+    <path
+        d="M1.41422 6.70703L0.707108 5.99992L1.54972e-06 6.70703L0.707108 7.41414L1.41422 6.70703ZM16.4142 7.70703C16.9665 7.70703 17.4142 7.25932 17.4142 6.70703C17.4142 6.15475 16.9665 5.70703 16.4142 5.70703V6.70703V7.70703ZM7.41422 0.707031L6.70711 -7.55191e-05L0.707108 5.99992L1.41422 6.70703L2.12132 7.41414L8.12132 1.41414L7.41422 0.707031ZM1.41422 6.70703L0.707108 7.41414L6.70711 13.4141L7.41422 12.707L8.12132 11.9999L2.12132 5.99992L1.41422 6.70703ZM1.41422 6.70703V7.70703H16.4142V6.70703V5.70703H1.41422V6.70703Z"
+        fill="@Color" />
+</svg>
+
+@code {
+    [Parameter]
+    public string Color { get; set; } = "#3D72D0";
+
+    [Parameter]
+    public int Width { get; set; } = 18;
+
+    [Parameter]
+    public int Height { get; set; } = 14;
+}

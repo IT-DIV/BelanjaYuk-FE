@@ -1,0 +1,349 @@
+@page "/register-seller"
+@using BelanjaYuk.Client.Services
+@using BelanjaYuk.Client.Models.Request
+@using BelanjaYuk.Client.Components.Icon
+@using BelanjaYuk.Client.Components.Common
+@inject AuthService AuthService
+@inject SellerService SellerService
+@inject NavigationManager Navigation
+
+<link rel="stylesheet" href="css/register-seller.css" />
+
+<NavBarV2 />
+
+<div class="register-seller-container">
+    <div class="register-seller-content">
+        <Breadcrumb Items="@breadcrumbItems" />
+        <div class="header-row">
+            <div class="header-text">
+                <h1 class="text-welcome">Daftar sebagai Seller</h1>
+                <p class="text-desc">Isi informasi toko Anda dengan lengkap untuk mulai berjualan di BelanjaYuk.</p>
+            </div>
+            <a href="/" class="back-button">
+                <ArrowLeftIcon Color="#5b8fff" /> Kembali
+            </a>
+        </div>
+
+        <div class="register-seller-wrapper">
+            <div class="register-seller-right">
+                <div class="register-seller-form-container">
+
+                <form class="register-seller-form" @onsubmit="HandleRegisterSeller">
+                    <div class="form-group full-width">
+                        <label for="storeName">Nama Toko</label>
+                        <input
+                            type="text"
+                            id="storeName"
+                            placeholder="Contoh: Toko Maju Jaya"
+                            @bind="storeName"
+                            @oninput="OnStoreNameInput"
+                            class="form-input @(errors.ContainsKey("storeName") ? "error" : "")"
+                            maxlength="40" />
+                        @if (errors.ContainsKey("storeName"))
+                        {
+                            <span class="error-message">@errors["storeName"]</span>
+                        }
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="storeUrl">URL Toko (otomatis)</label>
+                        <input
+                            type="text"
+                            id="storeUrl"
+                            placeholder="toko-maju-jaya"
+                            @bind="storeUrl"
+                            class="form-input @(errors.ContainsKey("storeUrl") ? "error" : "")" />
+                        <span class="url-preview">@baseUrl/toko/@storeUrl</span>
+                        @if (errors.ContainsKey("storeUrl"))
+                        {
+                            <span class="error-message">@errors["storeUrl"]</span>
+                        }
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="storePhone">No. HP Toko (opsional)</label>
+                        <input
+                            type="text"
+                            id="storePhone"
+                            placeholder="08xxx atau +628xxx"
+                            @bind="storePhone"
+                            class="form-input @(errors.ContainsKey("storePhone") ? "error" : "")" />
+                        @if (errors.ContainsKey("storePhone"))
+                        {
+                            <span class="error-message">@errors["storePhone"]</span>
+                        }
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="storeDescription">Deskripsi / Detail Profil</label>
+                        <textarea
+                            id="storeDescription"
+                            placeholder="Ceritakan tentang toko Anda, produk yang dijual, keunggulan, jam operasional, dsb."
+                            @bind="storeDescription"
+                            @oninput="OnDescriptionInput"
+                            class="form-textarea @(errors.ContainsKey("storeDescription") ? "error" : "")"
+                            maxlength="2000"></textarea>
+                        <span class="char-counter @(storeDescription.Length < 30 || storeDescription.Length > 2000 ? "error" : "")">@storeDescription.Length/2000 karakter</span>
+                        @if (errors.ContainsKey("storeDescription"))
+                        {
+                            <span class="error-message">@errors["storeDescription"]</span>
+                        }
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="storeAddress">Alamat Lengkap</label>
+                        <textarea
+                            id="storeAddress"
+                            placeholder="Isi dengan lengkap: Provinsi, Kota/Kabupaten, Kecamatan, Kode Pos, dan detail alamat toko"
+                            @bind="storeAddress"
+                            class="form-textarea @(errors.ContainsKey("storeAddress") ? "error" : "")"
+                            maxlength="500"></textarea>
+                        @if (errors.ContainsKey("storeAddress"))
+                        {
+                            <span class="error-message">@errors["storeAddress"]</span>
+                        }
+                    </div>
+
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" @bind="agreeTerms" />
+                            <span>Saya menyetujui ketentuan Seller BelanjaYuk dan bersedia mengikuti aturan yang berlaku.</span>
+                        </label>
+                    </div>
+
+                    @if (errors.ContainsKey("api"))
+                    {
+                        <div class="api-error">
+                            @errors["api"]
+                        </div>
+                    }
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-reset" @onclick="ResetForm">Reset</button>
+                        <button type="submit" class="btn-create" disabled="@(!agreeTerms || isSubmitting)">
+                            @if (isSubmitting)
+                            {
+                                <span>Memproses...</span>
+                            }
+                            else
+                            {
+                                <span>Create Toko</span>
+                            }
+                        </button>
+                    </div>
+                </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<string> breadcrumbItems = new List<string> { "Beranda", "Akun", "Daftar Reseller" };
+    private string storeName = "";
+    private string storeUrl = "";
+    private string storePhone = "";
+    private string storeDescription = "";
+    private string storeAddress = "";
+    private bool agreeTerms = false;
+    private bool isSubmitting = false;
+    private Dictionary<string, string> errors = new Dictionary<string, string>();
+    private string userId = "";
+    private string baseUrl = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Detect base URL from current environment
+        var uri = new Uri(Navigation.Uri);
+        baseUrl = $"{uri.Scheme}://{uri.Host}";
+
+        // Check if user is authenticated
+        if (!await AuthService.IsAuthenticatedAsync())
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        // Get current user info from token
+        var currentUser = await AuthService.GetCurrentUserAsync();
+        if (currentUser == null)
+        {
+            // Token invalid or expired, redirect to login
+            await AuthService.RemoveTokenAsync();
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        userId = currentUser.IdUser;
+    }
+
+    private void OnStoreNameInput(ChangeEventArgs e)
+    {
+        storeName = e.Value?.ToString() ?? "";
+
+        // Auto-generate URL from store name
+        storeUrl = GenerateUrlFromName(storeName);
+    }
+
+    private void OnDescriptionInput(ChangeEventArgs e)
+    {
+        storeDescription = e.Value?.ToString() ?? "";
+    }
+
+    private string GenerateUrlFromName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "";
+
+        // Convert to lowercase, replace spaces with hyphens, remove special characters
+        var url = name.ToLower()
+            .Replace(" ", "-")
+            .Replace("_", "-");
+
+        // Remove characters that are not letters, numbers, or hyphens
+        url = System.Text.RegularExpressions.Regex.Replace(url, @"[^a-z0-9\-]", "");
+
+        // Remove multiple consecutive hyphens
+        url = System.Text.RegularExpressions.Regex.Replace(url, @"-+", "-");
+
+        // Remove leading/trailing hyphens
+        url = url.Trim('-');
+
+        return url;
+    }
+
+    private bool ValidateForm()
+    {
+        errors.Clear();
+        bool isValid = true;
+
+        // Validate Nama Toko
+        if (string.IsNullOrWhiteSpace(storeName))
+        {
+            errors["storeName"] = "Nama toko wajib diisi.";
+            isValid = false;
+        }
+        else if (storeName.Length < 3 || storeName.Length > 40)
+        {
+            errors["storeName"] = "Nama toko harus 3-40 karakter.";
+            isValid = false;
+        }
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(storeName, @"^[a-zA-Z0-9\s\-]+$"))
+        {
+            errors["storeName"] = "Nama toko hanya boleh huruf, angka, spasi, dan tanda hubung.";
+            isValid = false;
+        }
+
+        // Validate URL Toko
+        if (string.IsNullOrWhiteSpace(storeUrl))
+        {
+            errors["storeUrl"] = "URL toko wajib diisi.";
+            isValid = false;
+        }
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(storeUrl, @"^[a-z0-9\-]+$"))
+        {
+            errors["storeUrl"] = "URL toko hanya boleh huruf kecil, angka, dan tanda hubung.";
+            isValid = false;
+        }
+
+        // Validate No. HP Toko (optional)
+        if (!string.IsNullOrWhiteSpace(storePhone))
+        {
+            var cleanPhone = storePhone.Replace(" ", "").Replace("-", "");
+            if (!System.Text.RegularExpressions.Regex.IsMatch(cleanPhone, @"^(\+628|08)\d{8,11}$"))
+            {
+                errors["storePhone"] = "Format nomor HP tidak valid. Gunakan 08xxx atau +628xxx.";
+                isValid = false;
+            }
+        }
+
+        // Validate Deskripsi
+        if (string.IsNullOrWhiteSpace(storeDescription))
+        {
+            errors["storeDescription"] = "Deskripsi toko wajib diisi.";
+            isValid = false;
+        }
+        else if (storeDescription.Length < 30)
+        {
+            errors["storeDescription"] = "Deskripsi minimal 30 karakter.";
+            isValid = false;
+        }
+        else if (storeDescription.Length > 2000)
+        {
+            errors["storeDescription"] = "Deskripsi maksimal 2000 karakter.";
+            isValid = false;
+        }
+
+        // Validate Alamat
+        if (string.IsNullOrWhiteSpace(storeAddress))
+        {
+            errors["storeAddress"] = "Alamat lengkap wajib diisi.";
+            isValid = false;
+        }
+        else if (storeAddress.Length < 10)
+        {
+            errors["storeAddress"] = "Alamat minimal 10 karakter.";
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    private async Task HandleRegisterSeller()
+    {
+        if (!ValidateForm())
+        {
+            return;
+        }
+
+        if (isSubmitting)
+        {
+            return;
+        }
+
+        isSubmitting = true;
+
+        try
+        {
+            var request = new SellerRegisterRequest
+            {
+                UserId = userId,
+                NamaToko = storeName,
+                NoHpToko = string.IsNullOrWhiteSpace(storePhone) ? null : storePhone,
+                UrlToko = storeUrl,
+                Deskripsi = storeDescription,
+                AlamatLengkap = storeAddress
+            };
+
+            var result = await SellerService.RegisterSellerAsync(request);
+
+            if (result.Success)
+            {
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                errors["api"] = result.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errors["api"] = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void ResetForm()
+    {
+        storeName = "";
+        storeUrl = "";
+        storePhone = "";
+        storeDescription = "";
+        storeAddress = "";
+        agreeTerms = false;
+        errors.Clear();
+    }
+}
