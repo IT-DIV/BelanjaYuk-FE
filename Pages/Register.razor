@@ -1,4 +1,8 @@
 @page "/register"
+@using BelanjaYuk.Client.Services
+@using BelanjaYuk.Client.Models.Request
+@inject AuthService AuthService
+@inject NavigationManager Navigation
 
 <div class="register-container">
     <div class="register-wrapper">
@@ -26,20 +30,6 @@
                         @if (errors.ContainsKey("fullname"))
                         {
                             <span class="error-message">@errors["fullname"]</span>
-                        }
-                    </div>
-
-                    <div class="form-group">
-                        <label for="identityName">Nama sesuai Identitas</label>
-                        <input
-                            type="text"
-                            id="identityName"
-                            @bind="identityName"
-                            @bind:event="oninput"
-                            class="form-input @(errors.ContainsKey("identityName") ? "error" : "")" />
-                        @if (errors.ContainsKey("identityName"))
-                        {
-                            <span class="error-message">@errors["identityName"]</span>
                         }
                     </div>
 
@@ -92,8 +82,8 @@
                         <label for="gender">Jenis Kelamin</label>
                         <select id="gender" @bind="gender" class="form-input @(errors.ContainsKey("gender") ? "error" : "")">
                             <option value="">Pilih</option>
-                            <option value="Pria">Pria</option>
-                            <option value="Wanita">Wanita</option>
+                            <option value="GEN001">Laki-Laki</option>
+                            <option value="GEN002">Perempuan</option>
                         </select>
                         @if (errors.ContainsKey("gender"))
                         {
@@ -236,7 +226,23 @@
                         <span>Setuju dengan Syarat & Ketentuan Privasi</span>
                     </label>
 
-                    <button type="submit" class="btn-login">Buat Akun</button>
+                    @if (errors.ContainsKey("api"))
+                    {
+                        <div class="api-error">
+                            @errors["api"]
+                        </div>
+                    }
+
+                    <button type="submit" class="btn-login" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span>Membuat akun...</span>
+                        }
+                        else
+                        {
+                            <span>Buat Akun</span>
+                        }
+                    </button>
 
                     <p class="register-prompt">
                         Sudah punya akun? <a href="/login">Masuk</a>
@@ -249,7 +255,6 @@
 
 @code {
     private string fullname = "";
-    private string identityName = "";
     private string username = "";
     private string email = "";
     private string phone = "";
@@ -265,6 +270,15 @@
     private string fullAddress = "";
     private bool agreePrivacy = false;
     private Dictionary<string, string> errors = new Dictionary<string, string>();
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (await AuthService.IsAuthenticatedAsync())
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
 
     private void ToggleAddress()
     {
@@ -285,18 +299,6 @@
         else if (!System.Text.RegularExpressions.Regex.IsMatch(fullname, @"^[a-zA-Z\s]+$"))
         {
             errors["fullname"] = "Nama hanya boleh huruf dan spasi.";
-            isValid = false;
-        }
-
-        // Validate Nama sesuai Identitas
-        if (string.IsNullOrWhiteSpace(identityName))
-        {
-            errors["identityName"] = "Nama sesuai identitas wajib diisi.";
-            isValid = false;
-        }
-        else if (!System.Text.RegularExpressions.Regex.IsMatch(identityName, @"^[a-zA-Z\s]+$"))
-        {
-            errors["identityName"] = "Nama hanya boleh huruf dan spasi.";
             isValid = false;
         }
 
@@ -429,11 +431,62 @@
         return isValid;
     }
 
-    private void HandleRegister()
+    private async Task HandleRegister()
     {
-        if (ValidateForm())
+        if (!ValidateForm())
         {
-            Console.WriteLine("Form valid - ready to submit");
+            return;
+        }
+
+        if (isSubmitting)
+        {
+            return;
+        }
+
+        isSubmitting = true;
+
+        try
+        {
+            var request = new RegisterRequest
+            {
+                NamaLengkap = fullname,
+                Username = username,
+                Email = email,
+                NoHP = phone,
+                KataSandi = password,
+                KonfirmasiSandi = confirmPassword,
+                TanggalLahir = birthdate ?? DateTime.Now,
+                IdGender = gender,
+                AlamatUtama = showAddress && !string.IsNullOrWhiteSpace(province)
+                    ? new AlamatUtama
+                    {
+                        Provinsi = province,
+                        KotaKabupaten = city,
+                        Kecamatan = district,
+                        KodePos = postalCode,
+                        AlamatLengkap = fullAddress
+                    }
+                    : null
+            };
+
+            var result = await AuthService.RegisterAsync(request);
+
+            if (result.Success)
+            {
+                Navigation.NavigateTo("/login");
+            }
+            else
+            {
+                errors["api"] = result.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errors["api"] = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
         }
     }
 }

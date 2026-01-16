@@ -1,4 +1,8 @@
 @page "/login"
+@using BelanjaYuk.Client.Services
+@using BelanjaYuk.Client.Models.Request
+@inject AuthService AuthService
+@inject NavigationManager Navigation
 
 <div class="login-container">
     <div class="login-wrapper">
@@ -63,7 +67,23 @@
                         <a href="#" class="forgot-password">Lupa kata sandi?</a>
                     </div>
 
-                    <button type="submit" class="btn-login">Masuk</button>
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="api-error">
+                            @errorMessage
+                        </div>
+                    }
+
+                    <button type="submit" class="btn-login" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span>Memproses...</span>
+                        }
+                        else
+                        {
+                            <span>Masuk</span>
+                        }
+                    </button>
 
                     <div class="divider">
                         <span>atau</span>
@@ -86,9 +106,66 @@
     private string email = "";
     private string password = "";
     private bool rememberMe = false;
+    private bool isSubmitting = false;
+    private string errorMessage = "";
 
-    private void HandleLogin()
+    protected override async Task OnInitializedAsync()
     {
-        // Handle login logic here
+        if (await AuthService.IsAuthenticatedAsync())
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        errorMessage = "";
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            errorMessage = "Email atau No. HP wajib diisi.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            errorMessage = "Kata sandi wajib diisi.";
+            return;
+        }
+
+        if (isSubmitting)
+        {
+            return;
+        }
+
+        isSubmitting = true;
+
+        try
+        {
+            var request = new LoginRequest
+            {
+                EmailOrPhone = email,
+                Password = password
+            };
+
+            var result = await AuthService.LoginAsync(request);
+
+            if (result.Success)
+            {
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                errorMessage = result.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
     }
 }

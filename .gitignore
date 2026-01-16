@@ -168,6 +168,9 @@ docker-compose.override.yml
 .env.local
 .env.*.local
 
+# App settings (contains API URLs and configs)
+wwwroot/appsettings.json
+
 # OS Files
 .DS_Store
 Thumbs.db

@@ -82,6 +82,22 @@
   display: block;
 }
 
+.api-error {
+  grid-column: 1 / -1;
+  background-color: #fee2e2;
+  border: 1px solid #ef4444;
+  color: #991b1b;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.btn-login:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .register-form .form-group.span-2 {
   grid-column: span 2;
 }
@@ -164,21 +180,17 @@
     max-height: none;
   }
 
+  .register-right {
+    padding: 30px 20px;
+    max-height: none;
+  }
+
   .register-form {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .address-fields {
-    grid-template-columns: 1fr;
-  }
-
-  .register-left {
-    padding: 40px 30px;
-  }
-
-  .register-right {
-    padding: 40px 30px;
-    overflow-y: visible;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -189,17 +201,38 @@
 
   .register-wrapper {
     border-radius: 15px;
-  }
-
-  .register-left {
-    padding: 30px 20px;
+    min-width: auto;
   }
 
   .register-right {
-    padding: 30px 20px;
+    padding: 20px 15px;
   }
 
-  .register-form .form-row {
-    flex-direction: column;
+  .register-form {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .address-fields {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .register-form .form-group label {
+    font-size: 12px;
+  }
+
+  .register-form .form-group input,
+  .register-form .form-group select {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .address-section {
+    padding: 8px;
+  }
+
+  .address-toggle {
+    font-size: 12px;
   }
 }

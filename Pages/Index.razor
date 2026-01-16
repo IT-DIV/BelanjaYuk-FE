@@ -1,0 +1,47 @@
+@page "/"
+@using BelanjaYuk.Client.Services
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: Arial, sans-serif;">
+    <h1>Hello World!</h1>
+    <p>Welcome to BelanjaYuk</p>
+
+    @if (isAuthenticated)
+    {
+        <p>You are logged in as: <strong>@username</strong></p>
+        <button @onclick="HandleLogout" style="margin-top: 20px; padding: 10px 20px; background-color: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer;">
+            Logout
+        </button>
+    }
+    else
+    {
+        <p>Loading...</p>
+    }
+</div>
+
+@code {
+    private bool isAuthenticated = false;
+    private string username = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if user is authenticated
+        isAuthenticated = await AuthService.IsAuthenticatedAsync();
+
+        if (!isAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        var token = await AuthService.GetTokenAsync();
+        username = "User"; 
+    }
+
+    private async Task HandleLogout()
+    {
+        await AuthService.RemoveTokenAsync();
+        Navigation.NavigateTo("/login");
+    }
+}
