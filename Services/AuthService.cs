@@ -157,6 +157,59 @@ public class AuthService
         var token = await GetTokenAsync();
         return !string.IsNullOrEmpty(token);
     }
+
+    public async Task<VerifyTokenResponse?> VerifyTokenAsync()
+    {
+        try
+        {
+            var token = await GetTokenAsync();
+            if (string.IsNullOrEmpty(token))
+            {
+                return new VerifyTokenResponse { IsValid = false };
+            }
+
+            // Set Authorization header
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await _httpClient.GetAsync("/api/v1/auth/verify");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<VerifyTokenResponse>();
+                return result;
+            }
+
+            return new VerifyTokenResponse { IsValid = false };
+        }
+        catch
+        {
+            return new VerifyTokenResponse { IsValid = false };
+        }
+    }
+
+    public async Task<UserInfo?> GetCurrentUserAsync()
+    {
+        var verifyResult = await VerifyTokenAsync();
+
+        if (verifyResult?.IsValid == true && verifyResult.User != null)
+        {
+            return verifyResult.User;
+        }
+
+        return null;
+    }
+
+    public async Task<HttpClient> GetAuthenticatedHttpClientAsync()
+    {
+        var token = await GetTokenAsync();
+        if (!string.IsNullOrEmpty(token))
+        {
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        }
+        return _httpClient;
+    }
 }
 
 public class AuthResult<T>

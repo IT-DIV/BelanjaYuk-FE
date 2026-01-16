@@ -19,4 +19,13 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseU
 // Register AuthService
 builder.Services.AddScoped<AuthService>();
 
+// Register SellerService
+builder.Services.AddScoped<SellerService>();
+
+// Register CategoryService
+builder.Services.AddScoped<CategoryService>();
+
+// Register ProductService
+builder.Services.AddScoped<ProductService>();
+
 await builder.Build().RunAsync();

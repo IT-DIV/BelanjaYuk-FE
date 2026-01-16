@@ -1,0 +1,23 @@
+<svg
+    width="@Width"
+    height="@Height"
+    viewBox="0 0 10 18"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style="display: inline-block; vertical-align: middle;">
+    <path
+        d="M0.751953 16.6582L7.75195 8.6582L0.751953 0.658203"
+        stroke="@Color"
+        stroke-width="2" />
+</svg>
+
+@code {
+    [Parameter]
+    public string Color { get; set; } = "#374151";
+
+    [Parameter]
+    public int Width { get; set; } = 10;
+
+    [Parameter]
+    public int Height { get; set; } = 18;
+}

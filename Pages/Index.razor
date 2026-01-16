@@ -1,47 +1,157 @@
 @page "/"
 @using BelanjaYuk.Client.Services
+@using BelanjaYuk.Client.Models.Response
+@using BelanjaYuk.Client.Components.Common
 @inject AuthService AuthService
+@inject CategoryService CategoryService
+@inject ProductService ProductService
 @inject NavigationManager Navigation
 
-<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: Arial, sans-serif;">
-    <h1>Hello World!</h1>
-    <p>Welcome to BelanjaYuk</p>
+<link rel="stylesheet" href="css/homepage.css" />
 
-    @if (isAuthenticated)
-    {
-        <p>You are logged in as: <strong>@username</strong></p>
-        <button @onclick="HandleLogout" style="margin-top: 20px; padding: 10px 20px; background-color: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer;">
-            Logout
-        </button>
-    }
-    else
-    {
-        <p>Loading...</p>
-    }
+<NavBar SearchQuery="@searchQuery" OnSearchChanged="HandleSearchChanged" />
+
+<div class="main-content">
+    <div class="content-layout @(isAuthenticated ? "has-profile" : "")">
+        <div class="hero-card">
+            <h1 class="hero-title">Belanja jadi mudah, cepat, dan hemat</h1>
+            <p class="hero-desc">Nikmati pengiriman cepat dan banyak pilihan produk favorit.</p>
+
+            <div class="category-pills">
+                <button class="category-pill @(selectedCategory == null ? "active" : "")" @onclick="() => SelectCategory(null)">
+                    Semua
+                </button>
+                @foreach (var category in categories)
+                {
+                    <button class="category-pill @(selectedCategory == category.IdCategory ? "active" : "")" @onclick="() => SelectCategory(category.IdCategory)">
+                        @category.CategoryName
+                    </button>
+                }
+            </div>
+        </div>
+
+        @if (isAuthenticated)
+        {
+            <div class="profile-card">
+                <div class="profile-avatar">@username.Substring(0, 2).ToUpper()</div>
+                <div class="profile-greeting">Hale, @username 👋</div>
+                <div class="profile-actions">
+                    <button class="btn-profile">Profil</button>
+                    <button class="btn-orders">Lihat Pesanan</button>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="products-section">
+        @if (isLoading)
+        {
+            <div class="no-products">Memuat produk...</div>
+        }
+        else if (products.Count == 0)
+        {
+            <div class="no-products">Tidak ada produk untuk kategori ini.</div>
+        }
+        else
+        {
+            <div class="products-grid">
+                @foreach (var product in products)
+                {
+                    <div class="product-card">
+                        <div class="product-image">
+                            📦
+                        </div>
+                        <div class="product-info">
+                            <div class="product-name">@product.ProductName</div>
+                            <div class="product-category">@product.CategoryName</div>
+                            <div class="product-price-container">
+                                <div>
+                                    <span class="product-price">Rp @product.PriceAfterDiscount.ToString("N0")</span>
+                                    @if (product.DiscountProduct > 0)
+                                    {
+                                        <span class="product-discount">@product.DiscountProduct%</span>
+                                    }
+                                </div>
+                                @if (product.DiscountProduct > 0)
+                                {
+                                    <div class="product-original-price">Rp @product.Price.ToString("N0")</div>
+                                }
+                            </div>
+                            @if (product.AvgRating > 0)
+                            {
+                                <div class="product-rating">
+                                    ⭐ @product.AvgRating.ToString("0.0")
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
 </div>
 
 @code {
     private bool isAuthenticated = false;
     private string username = "";
+    private string searchQuery = "";
+    private string? selectedCategory = null;
+    private List<CategoryResponse> categories = new List<CategoryResponse>();
+    private List<ProductResponse> products = new List<ProductResponse>();
+    private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        // Check if user is authenticated
         isAuthenticated = await AuthService.IsAuthenticatedAsync();
 
-        if (!isAuthenticated)
+        if (isAuthenticated)
         {
-            Navigation.NavigateTo("/login");
-            return;
+            var currentUser = await AuthService.GetCurrentUserAsync();
+            if (currentUser != null)
+            {
+                username = currentUser.Username;
+            }
         }
 
-        var token = await AuthService.GetTokenAsync();
-        username = "User"; 
+        categories = await CategoryService.GetCategoriesAsync();
+        await LoadProducts();
     }
 
-    private async Task HandleLogout()
+    private async Task LoadProducts()
     {
-        await AuthService.RemoveTokenAsync();
-        Navigation.NavigateTo("/login");
+        isLoading = true;
+
+        if (selectedCategory == null)
+        {
+            products = await ProductService.GetProductsAsync(searchQuery);
+        }
+        else
+        {
+            products = await ProductService.GetProductsByCategoryAsync(selectedCategory, searchQuery);
+        }
+
+        isLoading = false;
+    }
+
+    private async Task SelectCategory(string? categoryId)
+    {
+        selectedCategory = categoryId;
+        await LoadProducts();
+    }
+
+    private System.Threading.Timer? searchTimer;
+
+    private async Task HandleSearchChanged(string query)
+    {
+        searchQuery = query;
+        searchTimer?.Dispose();
+        searchTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await LoadProducts();
+                StateHasChanged();
+            });
+        }, null, 500, System.Threading.Timeout.Infinite);
     }
 }

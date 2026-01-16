@@ -28,7 +28,6 @@
             <div class="login-form-container">
                 <div class="login-header">
                     <div class="logo">
-                        <span class="logo-icon">🛒</span>
                         <span class="logo-text">BelanjaYuk</span>
                     </div>
                     <h1 class="text-welcome">Hai, selamat datang kembali 👋</h1>
@@ -89,7 +88,7 @@
                         <span>atau</span>
                     </div>
 
-                    <button type="button" class="btn-continue-without-account">
+                    <button type="button" class="btn-continue-without-account" @onclick="ContinueWithoutAccount">
                         Lanjut tanpa akun
                     </button>
 
@@ -167,5 +166,10 @@
         {
             isSubmitting = false;
         }
+    }
+
+    private void ContinueWithoutAccount()
+    {
+        Navigation.NavigateTo("/");
     }
 }
