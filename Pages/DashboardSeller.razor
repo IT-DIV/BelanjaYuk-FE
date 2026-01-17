@@ -71,6 +71,12 @@
                                         <img src="@GetImageUrl(product.Images[0])" alt="@product.ProductName" />
                                     </div>
                                 }
+                                else
+                                {
+                                    <div class="product-image">
+                                        <div class="product-placeholder">📦</div>
+                                    </div>
+                                }
                                 <div class="product-info-cell">
                                     <div class="product-name-cell">@product.ProductName</div>
                                     <div class="product-id">#@(products.IndexOf(product) + 1)</div>
@@ -199,7 +205,10 @@
     {
         if (e.Key == "Enter")
         {
-            await LoadProducts();
+            if (IsSearchQueryValid())
+            {
+                await LoadProducts();
+            }
             return;
         }
 
@@ -209,10 +218,40 @@
         {
             await InvokeAsync(async () =>
             {
-                await LoadProducts();
+                if (IsSearchQueryValid())
+                {
+                    await LoadProducts();
+                }
                 StateHasChanged();
             });
         }, null, 500, System.Threading.Timeout.Infinite);
+    }
+
+    private bool IsSearchQueryValid()
+    {
+        // Allow empty search (show all)
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            return true;
+        }
+
+        // Trim whitespace for validation
+        var trimmed = searchQuery.Trim();
+
+        // Minimum 2 characters
+        if (trimmed.Length < 2)
+        {
+            return false;
+        }
+
+        // Check if it contains at least one alphanumeric character
+        // This prevents searches with only special characters
+        if (!System.Text.RegularExpressions.Regex.IsMatch(trimmed, @"[a-zA-Z0-9]"))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private void HandleAddProduct()
