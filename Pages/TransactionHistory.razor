@@ -11,6 +11,7 @@
 @inject IConfiguration Configuration
 
 <link rel="stylesheet" href="css/pages/transaction-history.css" />
+<link rel="stylesheet" href="css/components/add-to-cart-modal.css" />
 
 <NavBarV2 />
 
@@ -118,13 +119,7 @@
                                         }
                                     </div>
                                     <div class="item-actions">
-                                        @if (HasReview(item))
-                                        {
-                                            <button class="btn-action btn-delete-review" @onclick="() => DeleteReview(item)">
-                                                Hapus Ulasan
-                                            </button>
-                                        }
-                                        else if (item.Rating > 0)
+                                        @if (!HasReview(item) && item.Rating > 0)
                                         {
                                             <button class="btn-action btn-submit-review"
                                                     @onclick="() => SubmitReview(transaction.IdBuyerTransaction, item)"
@@ -153,6 +148,10 @@
     </div>
 }
 
+<AddToCartModal IsOpen="@showAddToCartModal"
+                OnClose="CloseAddToCartModal"
+                OnConfirm="ConfirmAddToCart" />
+
 @code {
     private bool isAuthenticated = false;
     private string userId = "";
@@ -167,6 +166,8 @@
     private Dictionary<string, int> tempRatings = new Dictionary<string, int>();
     private Dictionary<string, int> originalRatings = new Dictionary<string, int>();
     private Dictionary<string, string> originalComments = new Dictionary<string, string>();
+    private bool showAddToCartModal = false;
+    private string selectedProductId = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -195,15 +196,14 @@
         isLoading = true;
         transactions = await TransactionService.GetTransactionHistoryAsync(userId, fromDate, toDate);
 
-        // Track original ratings and comments from server
         originalRatings.Clear();
         originalComments.Clear();
         foreach (var transaction in transactions)
         {
             foreach (var item in transaction.Products)
             {
-                originalRatings[item.IdProduct] = item.Rating;
-                originalComments[item.IdProduct] = item.RatingComment ?? "";
+                originalRatings[item.IdBuyerTransactionDetail] = item.Rating;
+                originalComments[item.IdBuyerTransactionDetail] = item.RatingComment ?? "";
             }
         }
 
@@ -224,14 +224,14 @@
 
     private string GetImageUrl(string imagePath)
     {
-        var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://api-dev.drian.my.id";
+        var apiBaseUrl = Configuration["ApiBaseUrl"];
         return $"{apiBaseUrl}{imagePath}";
     }
 
     private void SetRating(TransactionItemResponse item, int rating)
     {
         item.Rating = rating;
-        tempRatings[item.IdProduct] = rating;
+        tempRatings[item.IdBuyerTransactionDetail] = rating;
     }
 
     private string GetStarClass(TransactionItemResponse item, int starIndex)
@@ -246,17 +246,17 @@
     private bool HasReview(TransactionItemResponse item)
     {
         // Check if this item has been submitted to server (has both rating AND comment from API)
-        return originalRatings.ContainsKey(item.IdProduct)
-               && originalRatings[item.IdProduct] > 0
-               && originalComments.ContainsKey(item.IdProduct)
-               && !string.IsNullOrEmpty(originalComments[item.IdProduct]);
+        return originalRatings.ContainsKey(item.IdBuyerTransactionDetail)
+               && originalRatings[item.IdBuyerTransactionDetail] > 0
+               && originalComments.ContainsKey(item.IdBuyerTransactionDetail)
+               && !string.IsNullOrEmpty(originalComments[item.IdBuyerTransactionDetail]);
     }
 
     private string GetReviewError(TransactionItemResponse item)
     {
-        if (reviewErrors.ContainsKey(item.IdProduct))
+        if (reviewErrors.ContainsKey(item.IdBuyerTransactionDetail))
         {
-            return reviewErrors[item.IdProduct];
+            return reviewErrors[item.IdBuyerTransactionDetail];
         }
         return "";
     }
@@ -272,18 +272,18 @@
         {
             if (item.RatingComment.Length < 5)
             {
-                reviewErrors[item.IdProduct] = "Komentar terlalu pendek.";
+                reviewErrors[item.IdBuyerTransactionDetail] = "Komentar terlalu pendek.";
                 return false;
             }
 
             if (item.RatingComment.Length > 1000)
             {
-                reviewErrors[item.IdProduct] = "Komentar maksimal 1000 karakter.";
+                reviewErrors[item.IdBuyerTransactionDetail] = "Komentar maksimal 1000 karakter.";
                 return false;
             }
         }
 
-        reviewErrors.Remove(item.IdProduct);
+        reviewErrors.Remove(item.IdBuyerTransactionDetail);
         return true;
     }
 
@@ -325,8 +325,8 @@
             ShowToast(result.Message, "success");
             item.RatingComment = "";
             item.Rating = 0;
-            originalRatings[item.IdProduct] = 0;
-            originalComments[item.IdProduct] = "";
+            originalRatings[item.IdBuyerTransactionDetail] = 0;
+            originalComments[item.IdBuyerTransactionDetail] = "";
             StateHasChanged();
         }
         else
@@ -335,13 +335,26 @@
         }
     }
 
-    private async Task BuyAgain(string productId)
+    private void BuyAgain(string productId)
     {
-        var result = await CartService.AddToCartAsync(userId, productId, 1);
+        selectedProductId = productId;
+        showAddToCartModal = true;
+    }
+
+    private void CloseAddToCartModal()
+    {
+        showAddToCartModal = false;
+        selectedProductId = "";
+    }
+
+    private async Task ConfirmAddToCart(int quantity)
+    {
+        var result = await CartService.AddToCartAsync(userId, selectedProductId, quantity);
 
         if (result.Success)
         {
             ShowToast("Produk ditambahkan ke keranjang.", "success");
+            CloseAddToCartModal();
         }
         else
         {

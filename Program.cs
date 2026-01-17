@@ -11,7 +11,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // Load appsettings.json
 var http = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
 var config = await http.GetFromJsonAsync<Dictionary<string, string>>("appsettings.json");
-var apiBaseUrl = config?["ApiBaseUrl"] ?? "https://api-dev.drian.my.id";
+var apiBaseUrl = config?["ApiBaseUrl"];
 
 // Configure HttpClient with API base URL
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseUrl) });

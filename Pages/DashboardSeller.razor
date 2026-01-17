@@ -301,7 +301,7 @@
 
     private string GetImageUrl(string imagePath)
     {
-        var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://api-dev.drian.my.id";
+        var apiBaseUrl = Configuration["ApiBaseUrl"];
         return $"{apiBaseUrl}{imagePath}";
     }
 }
