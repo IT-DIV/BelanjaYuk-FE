@@ -1,0 +1,35 @@
+@inherits LayoutComponentBase
+@using BelanjaYuk.Client.Services
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+@if (isLoading)
+{
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+        <p>Memuat...</p>
+    </div>
+}
+else if (!isAuthenticated)
+{
+    @* Redirect ke login jika belum authenticated *@
+}
+else
+{
+    @Body
+}
+
+@code {
+    private bool isAuthenticated = false;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAuthenticated = await AuthService.IsAuthenticatedAsync();
+        isLoading = false;
+
+        if (!isAuthenticated)
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+    }
+}

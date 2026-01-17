@@ -2,12 +2,16 @@
 @using BelanjaYuk.Client.Services
 @using BelanjaYuk.Client.Models.Response
 @using BelanjaYuk.Client.Components.Common
+@using Microsoft.Extensions.Configuration
 @inject AuthService AuthService
 @inject CategoryService CategoryService
 @inject ProductService ProductService
+@inject CartService CartService
 @inject NavigationManager Navigation
+@inject IConfiguration Configuration
 
-<link rel="stylesheet" href="css/homepage.css" />
+<link rel="stylesheet" href="css/pages/homepage.css" />
+<link rel="stylesheet" href="css/components/add-to-cart-modal.css" />
 
 <NavBar SearchQuery="@searchQuery" OnSearchChanged="HandleSearchChanged" />
 
@@ -30,14 +34,14 @@
             </div>
         </div>
 
-        @if (isAuthenticated)
+        @if (isAuthenticated && !string.IsNullOrEmpty(username))
         {
             <div class="profile-card">
-                <div class="profile-avatar">@username.Substring(0, 2).ToUpper()</div>
+                <div class="profile-avatar">@GetAvatarText()</div>
                 <div class="profile-greeting">Hale, @username 👋</div>
                 <div class="profile-actions">
-                    <button class="btn-profile">Profil</button>
-                    <button class="btn-orders">Lihat Pesanan</button>
+                    <button class="btn-profile" @onclick="GoToProfile">Profil</button>
+                    <button class="btn-orders" @onclick="GoToHistory">Lihat Pesanan</button>
                 </div>
             </div>
         }
@@ -59,7 +63,14 @@
                 {
                     <div class="product-card">
                         <div class="product-image">
-                            📦
+                            @if (product.Images != null && product.Images.Count > 0)
+                            {
+                                <img src="@GetImageUrl(product.Images[0])" alt="@product.ProductName" />
+                            }
+                            else
+                            {
+                                <span>📦</span>
+                            }
                         </div>
                         <div class="product-info">
                             <div class="product-name">@product.ProductName</div>
@@ -83,6 +94,9 @@
                                     ⭐ @product.AvgRating.ToString("0.0")
                                 </div>
                             }
+                            <button class="btn-add-to-cart" @onclick="() => HandleAddToCart(product.IdProduct)" disabled="@(!isAuthenticated)">
+                                Tambah
+                            </button>
                         </div>
                     </div>
                 }
@@ -91,14 +105,31 @@
     </div>
 </div>
 
+@if (showToast)
+{
+    <div class="toast @toastClass">
+        @toastMessage
+    </div>
+}
+
+<AddToCartModal IsOpen="showAddToCartModal"
+                OnClose="CloseAddToCartModal"
+                OnConfirm="ConfirmAddToCart" />
+
 @code {
     private bool isAuthenticated = false;
     private string username = "";
+    private string userId = "";
     private string searchQuery = "";
     private string? selectedCategory = null;
     private List<CategoryResponse> categories = new List<CategoryResponse>();
     private List<ProductResponse> products = new List<ProductResponse>();
     private bool isLoading = true;
+    private bool showToast = false;
+    private string toastMessage = "";
+    private string toastClass = "";
+    private bool showAddToCartModal = false;
+    private string selectedProductId = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -110,6 +141,12 @@
             if (currentUser != null)
             {
                 username = currentUser.Username;
+                userId = currentUser.IdUser;
+            }
+            else
+            {
+                // Token invalid, set isAuthenticated to false
+                isAuthenticated = false;
             }
         }
 
@@ -153,5 +190,79 @@
                 StateHasChanged();
             });
         }, null, 500, System.Threading.Timeout.Infinite);
+    }
+
+    private string GetImageUrl(string imagePath)
+    {
+        var apiBaseUrl = Configuration["ApiBaseUrl"];
+        return $"{apiBaseUrl}{imagePath}";
+    }
+
+    private string GetAvatarText()
+    {
+        if (string.IsNullOrEmpty(username)) return "??";
+        if (username.Length < 2) return username.ToUpper();
+        return username.Substring(0, 2).ToUpper();
+    }
+
+    private void HandleAddToCart(string productId)
+    {
+        if (!isAuthenticated)
+        {
+            ShowToast("Anda harus login terlebih dahulu.", "error");
+            return;
+        }
+
+        selectedProductId = productId;
+        showAddToCartModal = true;
+    }
+
+    private void CloseAddToCartModal()
+    {
+        showAddToCartModal = false;
+        selectedProductId = "";
+    }
+
+    private async Task ConfirmAddToCart(int quantity)
+    {
+        var result = await CartService.AddToCartAsync(userId, selectedProductId, quantity);
+
+        if (result.Success)
+        {
+            ShowToast(result.Message, "success");
+            CloseAddToCartModal();
+        }
+        else
+        {
+            ShowToast(result.Message, "error");
+        }
+    }
+
+    private void ShowToast(string message, string type)
+    {
+        toastMessage = message;
+        toastClass = type == "success" ? "toast-success" : "toast-error";
+        showToast = true;
+        StateHasChanged();
+
+        // Hide toast after 3 seconds
+        var timer = new System.Threading.Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                showToast = false;
+                StateHasChanged();
+            });
+        }, null, 3000, System.Threading.Timeout.Infinite);
+    }
+
+    private void GoToProfile()
+    {
+        Navigation.NavigateTo("/profile");
+    }
+
+    private void GoToHistory()
+    {
+        Navigation.NavigateTo("/history");
     }
 }

@@ -7,11 +7,12 @@
 @inject SellerService SellerService
 @inject NavigationManager Navigation
 
-<link rel="stylesheet" href="css/register-seller.css" />
+<link rel="stylesheet" href="css/pages/register-seller.css" />
 
-<NavBarV2 />
+<AuthGuard>
+    <NavBarV2 />
 
-<div class="register-seller-container">
+    <div class="register-seller-container">
     <div class="register-seller-content">
         <Breadcrumb Items="@breadcrumbItems" />
         <div class="header-row">
@@ -137,6 +138,7 @@
         </div>
     </div>
 </div>
+</AuthGuard>
 
 @code {
     private List<string> breadcrumbItems = new List<string> { "Beranda", "Akun", "Daftar Reseller" };
@@ -157,24 +159,9 @@
         var uri = new Uri(Navigation.Uri);
         baseUrl = $"{uri.Scheme}://{uri.Host}";
 
-        // Check if user is authenticated
-        if (!await AuthService.IsAuthenticatedAsync())
-        {
-            Navigation.NavigateTo("/login");
-            return;
-        }
-
         // Get current user info from token
         var currentUser = await AuthService.GetCurrentUserAsync();
-        if (currentUser == null)
-        {
-            // Token invalid or expired, redirect to login
-            await AuthService.RemoveTokenAsync();
-            Navigation.NavigateTo("/login");
-            return;
-        }
-
-        userId = currentUser.IdUser;
+        userId = currentUser!.IdUser;
     }
 
     private void OnStoreNameInput(ChangeEventArgs e)

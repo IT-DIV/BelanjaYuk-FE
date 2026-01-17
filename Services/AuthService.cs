@@ -180,6 +180,12 @@ public class AuthService
                 return result;
             }
 
+            // Clear localStorage jika token invalid (401 Unauthorized)
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                await RemoveTokenAsync();
+            }
+
             return new VerifyTokenResponse { IsValid = false };
         }
         catch
@@ -197,6 +203,8 @@ public class AuthService
             return verifyResult.User;
         }
 
+        // Clear localStorage jika token tidak valid
+        await RemoveTokenAsync();
         return null;
     }
 

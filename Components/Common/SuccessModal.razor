@@ -1,0 +1,34 @@
+@using BelanjaYuk.Client.Components.Icon
+
+@if (IsOpen)
+{
+    <div class="modal-overlay" @onclick="OnClose">
+        <div class="modal-content success-modal" @onclick:stopPropagation="true">
+            <div class="modal-icon">
+                <SuccessIcon Width="66" Height="64" Color="#549336" />
+            </div>
+            <h2 class="modal-title">@Title</h2>
+            <p class="modal-message">@Message</p>
+            <div class="modal-actions">
+                <button class="btn-modal btn-success" @onclick="OnClose">@ButtonText</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public string Title { get; set; } = "Berhasil!";
+
+    [Parameter]
+    public string Message { get; set; } = "Operasi berhasil dilakukan.";
+
+    [Parameter]
+    public string ButtonText { get; set; } = "OK";
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+}
