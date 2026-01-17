@@ -1,0 +1,364 @@
+@page "/history"
+@using BelanjaYuk.Client.Services
+@using BelanjaYuk.Client.Models.Response
+@using BelanjaYuk.Client.Models.Request
+@using BelanjaYuk.Client.Components.Common
+@using Microsoft.Extensions.Configuration
+@inject AuthService AuthService
+@inject TransactionService TransactionService
+@inject CartService CartService
+@inject NavigationManager Navigation
+@inject IConfiguration Configuration
+
+<link rel="stylesheet" href="css/pages/transaction-history.css" />
+
+<NavBarV2 />
+
+<div class="transaction-container">
+    <div class="transaction-header">
+        <h1>Riwayat Pesanan</h1>
+        <p class="transaction-subtitle">Lihat transaksi yang sudah selesai dan beri ulasan per produk.</p>
+    </div>
+
+    <div class="filter-section">
+        <div class="filter-group">
+            <label>Dari</label>
+            <input type="date" class="filter-date" @bind="fromDate" />
+        </div>
+        <div class="filter-group">
+            <label>Sampai</label>
+            <input type="date" class="filter-date" @bind="toDate" />
+        </div>
+        <button class="btn-filter" @onclick="ApplyFilter">Terapkan</button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="transaction-loading">Memuat riwayat transaksi...</div>
+    }
+    else if (!isAuthenticated)
+    {
+        <div class="transaction-empty">
+            <h3>Silakan login terlebih dahulu</h3>
+            <button class="btn-login-transaction" @onclick="GoToLogin">Login</button>
+        </div>
+    }
+    else if (transactions.Count == 0)
+    {
+        <div class="transaction-empty">
+            <h3>Belum ada transaksi</h3>
+            <p>Anda belum memiliki riwayat transaksi.</p>
+            <button class="btn-shop-now" @onclick="GoToHome">Belanja Sekarang</button>
+        </div>
+    }
+    else
+    {
+        <div class="transactions-list">
+            @foreach (var transaction in transactions)
+            {
+                <div class="transaction-card">
+                    <div class="transaction-card-header">
+                        <div class="transaction-id">@transaction.IdBuyerTransaction</div>
+                        <div class="transaction-info">
+                            <span class="transaction-status">Selesai</span>
+                            <span class="transaction-total">Rp @transaction.FinalPrice.ToString("N0")</span>
+                        </div>
+                    </div>
+
+                    <div class="transaction-items">
+                        @foreach (var item in transaction.Products)
+                        {
+                            <div class="transaction-item">
+                                <div class="item-image">
+                                    @if (item.Images != null && item.Images.Count > 0)
+                                    {
+                                        <img src="@GetImageUrl(item.Images[0])" alt="@item.ProductName" />
+                                    }
+                                    else
+                                    {
+                                        <div class="item-placeholder">📦</div>
+                                    }
+                                </div>
+                                <div class="item-details">
+                                    <h3 class="item-name">@item.ProductName</h3>
+                                    <div class="item-price-info">
+                                        <span class="item-price">Rp @item.PriceAtTransaction.ToString("N0")</span>
+                                        <span class="item-qty">x @item.Qty</span>
+                                    </div>
+                                    <div class="item-rating">
+                                        <div class="rating-stars">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                var starIndex = i;
+                                                <span class="star @(GetStarClass(item, starIndex))"
+                                                      @onclick="() => SetRating(item, starIndex)">
+                                                    ★
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="item-review">
+                                        <textarea class="review-input"
+                                                  placeholder="Tulis komentar tentang produk ini"
+                                                  @bind="item.RatingComment"
+                                                  maxlength="1000"></textarea>
+                                        @if (!string.IsNullOrEmpty(GetReviewError(item)))
+                                        {
+                                            <div class="review-error">@GetReviewError(item)</div>
+                                        }
+                                    </div>
+                                    <div class="item-actions">
+                                        @if (item.Rating > 0)
+                                        {
+                                            @if (HasReview(item))
+                                            {
+                                                <button class="btn-action btn-delete-review" @onclick="() => DeleteReview(item)">
+                                                    Hapus Ulasan
+                                                </button>
+                                            }
+                                            <button class="btn-action btn-submit-review"
+                                                    @onclick="() => SubmitReview(transaction.IdBuyerTransaction, item)"
+                                                    disabled="@(!IsReviewValid(item))">
+                                                Kirim Ulasan
+                                            </button>
+                                        }
+                                        <button class="btn-action btn-buy-again" @onclick="() => BuyAgain(item.IdProduct)">
+                                            Beli Lagi
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (showToast)
+{
+    <div class="toast @toastClass">
+        @toastMessage
+    </div>
+}
+
+@code {
+    private bool isAuthenticated = false;
+    private string userId = "";
+    private bool isLoading = true;
+    private List<TransactionHistoryResponse> transactions = new List<TransactionHistoryResponse>();
+    private DateTime? fromDate = null;
+    private DateTime? toDate = null;
+    private bool showToast = false;
+    private string toastMessage = "";
+    private string toastClass = "";
+    private Dictionary<string, string> reviewErrors = new Dictionary<string, string>();
+    private Dictionary<string, int> tempRatings = new Dictionary<string, int>();
+    private Dictionary<string, int> originalRatings = new Dictionary<string, int>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAuthenticated = await AuthService.IsAuthenticatedAsync();
+
+        if (!isAuthenticated)
+        {
+            isLoading = false;
+            return;
+        }
+
+        var currentUser = await AuthService.GetCurrentUserAsync();
+        if (currentUser == null)
+        {
+            isAuthenticated = false;
+            isLoading = false;
+            return;
+        }
+
+        userId = currentUser.IdUser;
+        await LoadTransactions();
+    }
+
+    private async Task LoadTransactions()
+    {
+        isLoading = true;
+        transactions = await TransactionService.GetTransactionHistoryAsync(userId, fromDate, toDate);
+
+        // Track original ratings from server
+        originalRatings.Clear();
+        foreach (var transaction in transactions)
+        {
+            foreach (var item in transaction.Products)
+            {
+                originalRatings[item.IdProduct] = item.Rating;
+            }
+        }
+
+        isLoading = false;
+    }
+
+    private async Task ApplyFilter()
+    {
+        if (fromDate.HasValue != toDate.HasValue)
+        {
+            ShowToast("Kedua field tanggal harus diisi.", "error");
+            return;
+        }
+
+        if (fromDate.HasValue && toDate.HasValue && fromDate > toDate)
+        {
+            ShowToast("Tanggal dari harus lebih kecil atau sama dengan tanggal sampai.", "error");
+            return;
+        }
+
+        await LoadTransactions();
+    }
+
+    private string GetImageUrl(string imagePath)
+    {
+        var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://api-dev.drian.my.id";
+        return $"{apiBaseUrl}{imagePath}";
+    }
+
+    private void SetRating(TransactionItemResponse item, int rating)
+    {
+        item.Rating = rating;
+        tempRatings[item.IdProduct] = rating;
+    }
+
+    private string GetStarClass(TransactionItemResponse item, int starIndex)
+    {
+        if (item.Rating > 0 && starIndex <= item.Rating)
+        {
+            return "filled";
+        }
+        return "";
+    }
+
+    private bool HasReview(TransactionItemResponse item)
+    {
+        return !string.IsNullOrEmpty(item.RatingComment);
+    }
+
+    private string GetReviewError(TransactionItemResponse item)
+    {
+        if (reviewErrors.ContainsKey(item.IdProduct))
+        {
+            return reviewErrors[item.IdProduct];
+        }
+        return "";
+    }
+
+    private bool IsReviewValid(TransactionItemResponse item)
+    {
+        if (item.Rating < 1)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrEmpty(item.RatingComment))
+        {
+            if (item.RatingComment.Length < 5)
+            {
+                reviewErrors[item.IdProduct] = "Komentar terlalu pendek.";
+                return false;
+            }
+
+            if (item.RatingComment.Length > 1000)
+            {
+                reviewErrors[item.IdProduct] = "Komentar maksimal 1000 karakter.";
+                return false;
+            }
+        }
+
+        reviewErrors.Remove(item.IdProduct);
+        return true;
+    }
+
+    private async Task SubmitReview(string transactionId, TransactionItemResponse item)
+    {
+        if (!IsReviewValid(item))
+        {
+            ShowToast("Pastikan rating dan komentar sudah sesuai.", "error");
+            return;
+        }
+
+        var request = new ReviewRequest
+            {
+                UserId = userId,
+                IdBuyerTransactionDetail = item.IdBuyerTransactionDetail,
+                Rating = item.Rating,
+                RatingComment = item.RatingComment ?? ""
+            };
+
+        var result = await TransactionService.SubmitReviewAsync(request);
+
+        if (result.Success)
+        {
+            ShowToast(result.Message, "success");
+            await LoadTransactions();
+        }
+        else
+        {
+            ShowToast(result.Message, "error");
+        }
+    }
+
+    private async Task DeleteReview(TransactionItemResponse item)
+    {
+        var result = await TransactionService.DeleteReviewAsync(userId, item.IdProduct);
+
+        if (result.Success)
+        {
+            ShowToast(result.Message, "success");
+            item.RatingComment = "";
+            item.Rating = 0;
+            StateHasChanged();
+        }
+        else
+        {
+            ShowToast(result.Message, "error");
+        }
+    }
+
+    private async Task BuyAgain(string productId)
+    {
+        var result = await CartService.AddToCartAsync(userId, productId, 1);
+
+        if (result.Success)
+        {
+            ShowToast("Produk ditambahkan ke keranjang.", "success");
+        }
+        else
+        {
+            ShowToast(result.Message, "error");
+        }
+    }
+
+    private void GoToLogin()
+    {
+        Navigation.NavigateTo("/login");
+    }
+
+    private void GoToHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private void ShowToast(string message, string type)
+    {
+        toastMessage = message;
+        toastClass = type == "success" ? "toast-success" : "toast-error";
+        showToast = true;
+        StateHasChanged();
+
+        var timer = new System.Threading.Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                showToast = false;
+                StateHasChanged();
+            });
+        }, null, 3000, System.Threading.Timeout.Infinite);
+    }
+}

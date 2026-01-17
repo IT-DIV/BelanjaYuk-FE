@@ -10,8 +10,8 @@
 @inject NavigationManager Navigation
 @inject IConfiguration Configuration
 
-<link rel="stylesheet" href="css/homepage.css" />
-<link rel="stylesheet" href="css/add-to-cart-modal.css" />
+<link rel="stylesheet" href="css/pages/homepage.css" />
+<link rel="stylesheet" href="css/components/add-to-cart-modal.css" />
 
 <NavBar SearchQuery="@searchQuery" OnSearchChanged="HandleSearchChanged" />
 
@@ -34,14 +34,14 @@
             </div>
         </div>
 
-        @if (isAuthenticated)
+        @if (isAuthenticated && !string.IsNullOrEmpty(username))
         {
             <div class="profile-card">
-                <div class="profile-avatar">@username.Substring(0, 2).ToUpper()</div>
+                <div class="profile-avatar">@GetAvatarText()</div>
                 <div class="profile-greeting">Hale, @username 👋</div>
                 <div class="profile-actions">
-                    <button class="btn-profile">Profil</button>
-                    <button class="btn-orders">Lihat Pesanan</button>
+                    <button class="btn-profile" @onclick="GoToProfile">Profil</button>
+                    <button class="btn-orders" @onclick="GoToHistory">Lihat Pesanan</button>
                 </div>
             </div>
         }
@@ -143,6 +143,11 @@
                 username = currentUser.Username;
                 userId = currentUser.IdUser;
             }
+            else
+            {
+                // Token invalid, set isAuthenticated to false
+                isAuthenticated = false;
+            }
         }
 
         categories = await CategoryService.GetCategoriesAsync();
@@ -191,6 +196,13 @@
     {
         var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://api-dev.drian.my.id";
         return $"{apiBaseUrl}{imagePath}";
+    }
+
+    private string GetAvatarText()
+    {
+        if (string.IsNullOrEmpty(username)) return "??";
+        if (username.Length < 2) return username.ToUpper();
+        return username.Substring(0, 2).ToUpper();
     }
 
     private void HandleAddToCart(string productId)
@@ -242,5 +254,15 @@
                 StateHasChanged();
             });
         }, null, 3000, System.Threading.Timeout.Infinite);
+    }
+
+    private void GoToProfile()
+    {
+        Navigation.NavigateTo("/profile");
+    }
+
+    private void GoToHistory()
+    {
+        Navigation.NavigateTo("/history");
     }
 }

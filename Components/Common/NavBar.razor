@@ -3,7 +3,7 @@
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 
-<link rel="stylesheet" href="css/homepage.css" />
+<link rel="stylesheet" href="css/pages/homepage.css" />
 
 <div class="navbar">
     <div class="navbar-container">
@@ -18,7 +18,7 @@
                 placeholder="Cari barang apa? (misal: sepatu, headset, kopi)"
                 @bind="searchQuery"
                 @onkeyup="HandleSearch" />
-            <button class="btn-cart-in-search">Cart</button>
+            <a href="/cart" class="btn-cart-in-search">Cart</a>
         </div>
 
         <div class="navbar-actions">

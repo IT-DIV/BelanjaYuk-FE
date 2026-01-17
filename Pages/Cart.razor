@@ -1,0 +1,413 @@
+@page "/cart"
+@using BelanjaYuk.Client.Services
+@using BelanjaYuk.Client.Models.Response
+@using BelanjaYuk.Client.Components.Common
+@using BelanjaYuk.Client.Components.Icon
+@using Microsoft.Extensions.Configuration
+@inject AuthService AuthService
+@inject CartService CartService
+@inject NavigationManager Navigation
+@inject IConfiguration Configuration
+
+<link rel="stylesheet" href="css/pages/cart.css" />
+<link rel="stylesheet" href="css/components/modal.css" />
+
+<NavBarV2 />
+
+<div class="cart-container">
+    @if (isLoading)
+    {
+        <div class="cart-loading">Memuat keranjang...</div>
+    }
+    else if (!isAuthenticated)
+    {
+        <div class="cart-empty">
+            <h3>Silakan login terlebih dahulu</h3>
+            <button class="btn-login-cart" @onclick="GoToLogin">Login</button>
+        </div>
+    }
+    else if (cartItems.Count == 0)
+    {
+        <div class="cart-empty">
+            <h3>Keranjang kosong</h3>
+            <p>Belum ada produk di keranjang Anda.</p>
+            <button class="btn-shop-now" @onclick="GoToHome">Belanja Sekarang</button>
+        </div>
+    }
+    else
+    {
+        <div class="cart-layout">
+            <div class="cart-left">
+                <div class="cart-header">
+                    <h2>Keranjang</h2>
+                    <p class="cart-subtitle">Atur kuantitas, cek diskon, lalu lanjutkan pembayaran.</p>
+                </div>
+
+                <div class="cart-items">
+                    @foreach (var item in cartItems)
+                    {
+                        <div class="cart-item">
+                            <div class="cart-item-image">
+                                @if (item.Images != null && item.Images.Count > 0)
+                                {
+                                    <img src="@GetImageUrl(item.Images[0])" alt="@item.ProductName" />
+                                }
+                                else
+                                {
+                                    <div class="cart-item-placeholder">📦</div>
+                                }
+                            </div>
+                            <div class="cart-item-details">
+                                <h3 class="cart-item-name">@item.ProductName</h3>
+                                <div class="cart-item-prices">
+                                    @if (item.DiscountProduct > 0)
+                                    {
+                                        <span class="cart-item-original-price">Rp @item.Price.ToString("N0")</span>
+                                        <span class="cart-item-price">Rp @item.PriceAfterDiscount.ToString("N0")</span>
+                                        <span class="cart-item-discount-badge">Diskon @item.DiscountProduct%</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="cart-item-price">Rp @item.PriceAfterDiscount.ToString("N0")</span>
+                                    }
+                                </div>
+                            </div>
+                            <div class="cart-item-quantity">
+                                <button class="btn-qty" @onclick="() => DecreaseQuantity(item)" disabled="@(item.Qty <= 1)">-</button>
+                                <input type="number"
+                                       class="input-qty"
+                                       value="@item.Qty"
+                                       @onchange="(e) => HandleQuantityChange(item, e)"
+                                       min="1"
+                                       max="99" />
+                                <button class="btn-qty" @onclick="() => IncreaseQuantity(item)" disabled="@(item.Qty >= 99)">+</button>
+                            </div>
+                            <div class="cart-item-subtotal">
+                                <span class="subtotal-label">Subtotal</span>
+                                <span class="subtotal-price">Rp @item.SubTotal.ToString("N0")</span>
+                                <span class="subtotal-detail">(Rp @item.PriceAfterDiscount.ToString("N0") x @item.Qty)</span>
+                            </div>
+                            <div class="cart-item-delete">
+                                <button class="btn-delete" @onclick="() => DeleteItem(item)" title="Hapus item">
+                                    <TrashIcon Width="20" Height="20" Color="currentColor" />
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="cart-right">
+                <div class="cart-summary">
+                    <h3>Ringkasan</h3>
+
+                    <div class="summary-row">
+                        <span>Subtotal</span>
+                        <span class="summary-value">Rp @CalculateSubtotal().ToString("N0")</span>
+                    </div>
+
+                    <div class="summary-row discount-row">
+                        <span>Diskon</span>
+                        <span class="summary-value discount">-Rp @CalculateTotalDiscount().ToString("N0")</span>
+                    </div>
+
+                    <div class="summary-row">
+                        <span>Biaya Pengiriman</span>
+                        <span class="summary-value">Rp 0</span>
+                    </div>
+
+                    <div class="summary-row">
+                        <span>Metode Pembayaran</span>
+                        <span class="summary-value">@GetSelectedPaymentName()</span>
+                    </div>
+
+                    <div class="summary-total">
+                        <span>Total</span>
+                        <span class="total-price">Rp @CalculateTotal().ToString("N0")</span>
+                    </div>
+
+                    <div class="payment-methods">
+                        @foreach (var payment in paymentOptions)
+                        {
+                            <label class="payment-radio">
+                                <input type="radio"
+                                       name="payment"
+                                       value="@payment.IdPayment"
+                                       @onchange="@(e => HandlePaymentMethodChange(e.Value.ToString()))"
+                                       checked="@(selectedPaymentId == payment.IdPayment)" />
+                                <span>@payment.PaymentName</span>
+                            </label>
+                        }
+                    </div>
+
+                    <button class="btn-checkout"
+                            @onclick="HandleCheckout"
+                            disabled="@(string.IsNullOrEmpty(selectedPaymentId) || isCheckingOut)">
+                        @if (isCheckingOut)
+                        {
+                            <span>Memproses...</span>
+                        }
+                        else
+                        {
+                            <span>Beli Barang</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<ConfirmationModal IsOpen="showConfirmationModal"
+                   Title="Konfirmasi Pembelian"
+                   Message="Apakah Anda yakin ingin melanjutkan pembelian?"
+                   ConfirmText="Ya, Lanjutkan"
+                   CancelText="Batal"
+                   OnConfirm="ConfirmCheckout"
+                   OnCancel="CancelCheckout" />
+
+<SuccessModal IsOpen="showSuccessModal"
+              Title="Pembelian Berhasil!"
+              Message="@successMessage"
+              ButtonText="OK"
+              OnClose="CloseSuccessModal" />
+
+@code {
+    private bool isAuthenticated = false;
+    private string userId = "";
+    private List<CartItemResponse> cartItems = new List<CartItemResponse>();
+    private List<PaymentOptionResponse> paymentOptions = new List<PaymentOptionResponse>();
+    private bool isLoading = true;
+    private string selectedPaymentMethod = "";
+    private string selectedPaymentId = "";
+    private bool isCheckingOut = false;
+    private bool showConfirmationModal = false;
+    private bool showSuccessModal = false;
+    private string successMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAuthenticated = await AuthService.IsAuthenticatedAsync();
+
+        if (!isAuthenticated)
+        {
+            isLoading = false;
+            return;
+        }
+
+        var currentUser = await AuthService.GetCurrentUserAsync();
+        if (currentUser == null)
+        {
+            isAuthenticated = false;
+            isLoading = false;
+            return;
+        }
+
+        userId = currentUser.IdUser;
+
+        // Load payment options dan cart secara parallel
+        var paymentTask = CartService.GetPaymentOptionsAsync();
+        var cartTask = LoadCart();
+
+        await Task.WhenAll(paymentTask, cartTask);
+
+        paymentOptions = await paymentTask;
+
+        // Select first payment option by default
+        if (paymentOptions.Count > 0)
+        {
+            selectedPaymentId = paymentOptions[0].IdPayment;
+            selectedPaymentMethod = paymentOptions[0].PaymentName;
+        }
+    }
+
+    private async Task LoadCart()
+    {
+        isLoading = true;
+        cartItems = await CartService.GetCartAsync(userId);
+        isLoading = false;
+    }
+
+    private string GetImageUrl(string imagePath)
+    {
+        var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://api-dev.drian.my.id";
+        return $"{apiBaseUrl}{imagePath}";
+    }
+
+    private async Task IncreaseQuantity(CartItemResponse item)
+    {
+        if (item.Qty >= 99) return;
+
+        var oldQty = item.Qty;
+        item.Qty++;
+        UpdateItemSubtotal(item);
+        StateHasChanged();
+
+        var result = await CartService.UpdateCartQuantityAsync(userId, item.IdBuyerCart, item.Qty);
+
+        // Rollback if failed
+        if (!result.Success)
+        {
+            item.Qty = oldQty;
+            UpdateItemSubtotal(item);
+            StateHasChanged();
+        }
+    }
+
+    private async Task DecreaseQuantity(CartItemResponse item)
+    {
+        if (item.Qty <= 1) return;
+
+        var oldQty = item.Qty;
+        item.Qty--;
+        UpdateItemSubtotal(item);
+        StateHasChanged();
+
+        var result = await CartService.UpdateCartQuantityAsync(userId, item.IdBuyerCart, item.Qty);
+
+        // Rollback if failed
+        if (!result.Success)
+        {
+            item.Qty = oldQty;
+            UpdateItemSubtotal(item);
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleQuantityChange(CartItemResponse item, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int newQty))
+        {
+            if (newQty < 1) newQty = 1;
+            if (newQty > 99) newQty = 99;
+
+            // Optimistic update
+            var oldQty = item.Qty;
+            item.Qty = newQty;
+            UpdateItemSubtotal(item);
+            StateHasChanged();
+
+            // Hit API in background
+            var result = await CartService.UpdateCartQuantityAsync(userId, item.IdBuyerCart, newQty);
+
+            // Rollback if failed
+            if (!result.Success)
+            {
+                item.Qty = oldQty;
+                UpdateItemSubtotal(item);
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void UpdateItemSubtotal(CartItemResponse item)
+    {
+        item.SubTotal = item.PriceAfterDiscount * item.Qty;
+    }
+
+    private decimal CalculateSubtotal()
+    {
+        return cartItems.Sum(item => item.Price * item.Qty);
+    }
+
+    private decimal CalculateTotalDiscount()
+    {
+        return cartItems.Sum(item => (item.Price - item.PriceAfterDiscount) * item.Qty);
+    }
+
+    private decimal CalculateTotal()
+    {
+        return cartItems.Sum(item => item.SubTotal);
+    }
+
+    private void HandleCheckout()
+    {
+        if (string.IsNullOrEmpty(selectedPaymentId))
+        {
+            return;
+        }
+
+        // Show confirmation modal
+        showConfirmationModal = true;
+    }
+
+    private void CancelCheckout()
+    {
+        showConfirmationModal = false;
+    }
+
+    private async Task ConfirmCheckout()
+    {
+        showConfirmationModal = false;
+        isCheckingOut = true;
+
+        var result = await CartService.CheckoutAsync(userId, selectedPaymentId);
+
+        isCheckingOut = false;
+
+        if (result.Success)
+        {
+            successMessage = result.Message;
+            showSuccessModal = true;
+        }
+        else
+        {
+            // Show error (bisa pakai toast atau modal error)
+            successMessage = result.Message;
+        }
+    }
+
+    private async Task CloseSuccessModal()
+    {
+        showSuccessModal = false;
+        // Refresh cart data setelah checkout berhasil
+        await LoadCart();
+    }
+
+    private void GoToLogin()
+    {
+        Navigation.NavigateTo("/login");
+    }
+
+    private void GoToHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private void HandlePaymentMethodChange(string paymentId)
+    {
+        selectedPaymentId = paymentId;
+        var payment = paymentOptions.FirstOrDefault(p => p.IdPayment == paymentId);
+        if (payment != null)
+        {
+            selectedPaymentMethod = payment.PaymentName;
+        }
+    }
+
+    private string GetSelectedPaymentName()
+    {
+        if (string.IsNullOrEmpty(selectedPaymentMethod))
+        {
+            return "-";
+        }
+        return selectedPaymentMethod;
+    }
+
+    private async Task DeleteItem(CartItemResponse item)
+    {
+        // Optimistic delete - remove from UI immediately
+        var deletedItem = item;
+        cartItems.Remove(item);
+        StateHasChanged();
+
+        // Hit API in background
+        var result = await CartService.RemoveFromCartAsync(userId, item.IdBuyerCart);
+
+        // Rollback if failed
+        if (!result.Success)
+        {
+            cartItems.Add(deletedItem);
+            StateHasChanged();
+        }
+    }
+}

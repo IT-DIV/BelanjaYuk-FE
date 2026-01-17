@@ -31,4 +31,7 @@ builder.Services.AddScoped<ProductService>();
 // Register CartService
 builder.Services.AddScoped<CartService>();
 
+// Register TransactionService
+builder.Services.AddScoped<TransactionService>();
+
 await builder.Build().RunAsync();
