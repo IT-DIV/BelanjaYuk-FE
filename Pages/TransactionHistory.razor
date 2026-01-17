@@ -90,10 +90,19 @@
                                             @for (int i = 1; i <= 5; i++)
                                             {
                                                 var starIndex = i;
-                                                <span class="star @(GetStarClass(item, starIndex))"
-                                                      @onclick="() => SetRating(item, starIndex)">
-                                                    ★
-                                                </span>
+                                                @if (HasReview(item))
+                                                {
+                                                    <span class="star @(GetStarClass(item, starIndex)) disabled">
+                                                        ★
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="star @(GetStarClass(item, starIndex))"
+                                                          @onclick="() => SetRating(item, starIndex)">
+                                                        ★
+                                                    </span>
+                                                }
                                             }
                                         </div>
                                     </div>
@@ -101,21 +110,22 @@
                                         <textarea class="review-input"
                                                   placeholder="Tulis komentar tentang produk ini"
                                                   @bind="item.RatingComment"
-                                                  maxlength="1000"></textarea>
+                                                  maxlength="1000"
+                                                  disabled="@HasReview(item)"></textarea>
                                         @if (!string.IsNullOrEmpty(GetReviewError(item)))
                                         {
                                             <div class="review-error">@GetReviewError(item)</div>
                                         }
                                     </div>
                                     <div class="item-actions">
-                                        @if (item.Rating > 0)
+                                        @if (HasReview(item))
                                         {
-                                            @if (HasReview(item))
-                                            {
-                                                <button class="btn-action btn-delete-review" @onclick="() => DeleteReview(item)">
-                                                    Hapus Ulasan
-                                                </button>
-                                            }
+                                            <button class="btn-action btn-delete-review" @onclick="() => DeleteReview(item)">
+                                                Hapus Ulasan
+                                            </button>
+                                        }
+                                        else if (item.Rating > 0)
+                                        {
                                             <button class="btn-action btn-submit-review"
                                                     @onclick="() => SubmitReview(transaction.IdBuyerTransaction, item)"
                                                     disabled="@(!IsReviewValid(item))">
@@ -156,6 +166,7 @@
     private Dictionary<string, string> reviewErrors = new Dictionary<string, string>();
     private Dictionary<string, int> tempRatings = new Dictionary<string, int>();
     private Dictionary<string, int> originalRatings = new Dictionary<string, int>();
+    private Dictionary<string, string> originalComments = new Dictionary<string, string>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -184,13 +195,15 @@
         isLoading = true;
         transactions = await TransactionService.GetTransactionHistoryAsync(userId, fromDate, toDate);
 
-        // Track original ratings from server
+        // Track original ratings and comments from server
         originalRatings.Clear();
+        originalComments.Clear();
         foreach (var transaction in transactions)
         {
             foreach (var item in transaction.Products)
             {
                 originalRatings[item.IdProduct] = item.Rating;
+                originalComments[item.IdProduct] = item.RatingComment ?? "";
             }
         }
 
@@ -237,7 +250,11 @@
 
     private bool HasReview(TransactionItemResponse item)
     {
-        return !string.IsNullOrEmpty(item.RatingComment);
+        // Check if this item has been submitted to server (has both rating AND comment from API)
+        return originalRatings.ContainsKey(item.IdProduct)
+               && originalRatings[item.IdProduct] > 0
+               && originalComments.ContainsKey(item.IdProduct)
+               && !string.IsNullOrEmpty(originalComments[item.IdProduct]);
     }
 
     private string GetReviewError(TransactionItemResponse item)
@@ -313,6 +330,8 @@
             ShowToast(result.Message, "success");
             item.RatingComment = "";
             item.Rating = 0;
+            originalRatings[item.IdProduct] = 0;
+            originalComments[item.IdProduct] = "";
             StateHasChanged();
         }
         else

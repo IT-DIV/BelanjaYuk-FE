@@ -213,7 +213,6 @@
 
         paymentOptions = await paymentTask;
 
-        // Select first payment option by default
         if (paymentOptions.Count > 0)
         {
             selectedPaymentId = paymentOptions[0].IdPayment;
@@ -352,7 +351,6 @@
         }
         else
         {
-            // Show error (bisa pakai toast atau modal error)
             successMessage = result.Message;
         }
     }
@@ -360,7 +358,6 @@
     private async Task CloseSuccessModal()
     {
         showSuccessModal = false;
-        // Refresh cart data setelah checkout berhasil
         await LoadCart();
     }
 
@@ -395,12 +392,10 @@
 
     private async Task DeleteItem(CartItemResponse item)
     {
-        // Optimistic delete - remove from UI immediately
         var deletedItem = item;
         cartItems.Remove(item);
         StateHasChanged();
 
-        // Hit API in background
         var result = await CartService.RemoveFromCartAsync(userId, item.IdBuyerCart);
 
         // Rollback if failed
