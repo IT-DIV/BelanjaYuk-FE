@@ -2,7 +2,7 @@
 @using BelanjaYuk.Client.Models.Request
 @using BelanjaYuk.Client.Models.Response
 @inject ProductService ProductService
-@inject CategoryService CategoryService
+@inject LookupService LookupService
 @inject SellerService SellerService
 
 <link rel="stylesheet" href="css/components/add-product-modal.css" />
@@ -152,7 +152,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        categories = await CategoryService.GetCategoriesAsync();
+        categories = await LookupService.GetCategoriesAsync();
     }
 
     protected override async Task OnParametersSetAsync()
