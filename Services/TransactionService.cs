@@ -28,9 +28,19 @@ public class TransactionService
 
             var url = $"/api/v1/orders/cart/{userId}";
 
-            if (fromDate.HasValue && toDate.HasValue)
+            // Build query string for date filters
+            var queryParams = new List<string>();
+            if (fromDate.HasValue)
             {
-                url += $"?fromDate={fromDate.Value:yyyy-MM-dd}&toDate={toDate.Value:yyyy-MM-dd}";
+                queryParams.Add($"startDate={fromDate.Value:yyyy-MM-dd}");
+            }
+            if (toDate.HasValue)
+            {
+                queryParams.Add($"endDate={toDate.Value:yyyy-MM-dd}");
+            }
+            if (queryParams.Count > 0)
+            {
+                url += "?" + string.Join("&", queryParams);
             }
 
             var response = await _httpClient.GetAsync(url);

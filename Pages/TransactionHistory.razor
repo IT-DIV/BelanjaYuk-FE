@@ -212,12 +212,7 @@
 
     private async Task ApplyFilter()
     {
-        if (fromDate.HasValue != toDate.HasValue)
-        {
-            ShowToast("Kedua field tanggal harus diisi.", "error");
-            return;
-        }
-
+        // Validate date range jika keduanya diisi
         if (fromDate.HasValue && toDate.HasValue && fromDate > toDate)
         {
             ShowToast("Tanggal dari harus lebih kecil atau sama dengan tanggal sampai.", "error");
