@@ -13,9 +13,10 @@
 <link rel="stylesheet" href="css/pages/transaction-history.css" />
 <link rel="stylesheet" href="css/components/add-to-cart-modal.css" />
 
-<NavBarV2 />
+<AuthGuard>
+    <NavBarV2 />
 
-<div class="transaction-container">
+    <div class="transaction-container">
     <div class="transaction-header">
         <h1>Riwayat Pesanan</h1>
         <p class="transaction-subtitle">Lihat transaksi yang sudah selesai dan beri ulasan per produk.</p>
@@ -36,13 +37,6 @@
     @if (isLoading)
     {
         <div class="transaction-loading">Memuat riwayat transaksi...</div>
-    }
-    else if (!isAuthenticated)
-    {
-        <div class="transaction-empty">
-            <h3>Silakan login terlebih dahulu</h3>
-            <button class="btn-login-transaction" @onclick="GoToLogin">Login</button>
-        </div>
     }
     else if (transactions.Count == 0)
     {
@@ -74,10 +68,6 @@
                                     @if (item.Images != null && item.Images.Count > 0)
                                     {
                                         <img src="@GetImageUrl(item.Images[0])" alt="@item.ProductName" />
-                                    }
-                                    else
-                                    {
-                                        <div class="item-placeholder">📦</div>
                                     }
                                 </div>
                                 <div class="item-details">
@@ -151,9 +141,9 @@
 <AddToCartModal IsOpen="@showAddToCartModal"
                 OnClose="CloseAddToCartModal"
                 OnConfirm="ConfirmAddToCart" />
+</AuthGuard>
 
 @code {
-    private bool isAuthenticated = false;
     private string userId = "";
     private bool isLoading = true;
     private List<TransactionHistoryResponse> transactions = new List<TransactionHistoryResponse>();
@@ -171,23 +161,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        isAuthenticated = await AuthService.IsAuthenticatedAsync();
-
-        if (!isAuthenticated)
-        {
-            isLoading = false;
-            return;
-        }
-
         var currentUser = await AuthService.GetCurrentUserAsync();
-        if (currentUser == null)
-        {
-            isAuthenticated = false;
-            isLoading = false;
-            return;
-        }
-
-        userId = currentUser.IdUser;
+        userId = currentUser!.IdUser;
         await LoadTransactions();
     }
 
@@ -245,7 +220,6 @@
 
     private bool HasReview(TransactionItemResponse item)
     {
-        // Check if this item has been submitted to server (has both rating AND comment from API)
         return originalRatings.ContainsKey(item.IdBuyerTransactionDetail)
                && originalRatings[item.IdBuyerTransactionDetail] > 0
                && originalComments.ContainsKey(item.IdBuyerTransactionDetail)

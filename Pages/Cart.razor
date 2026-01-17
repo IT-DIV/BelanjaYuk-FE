@@ -12,19 +12,13 @@
 <link rel="stylesheet" href="css/pages/cart.css" />
 <link rel="stylesheet" href="css/components/modal.css" />
 
-<NavBarV2 />
+<AuthGuard>
+    <NavBarV2 />
 
-<div class="cart-container">
+    <div class="cart-container">
     @if (isLoading)
     {
         <div class="cart-loading">Memuat keranjang...</div>
-    }
-    else if (!isAuthenticated)
-    {
-        <div class="cart-empty">
-            <h3>Silakan login terlebih dahulu</h3>
-            <button class="btn-login-cart" @onclick="GoToLogin">Login</button>
-        </div>
     }
     else if (cartItems.Count == 0)
     {
@@ -171,9 +165,9 @@
               Message="@successMessage"
               ButtonText="OK"
               OnClose="CloseSuccessModal" />
+</AuthGuard>
 
 @code {
-    private bool isAuthenticated = false;
     private string userId = "";
     private List<CartItemResponse> cartItems = new List<CartItemResponse>();
     private List<PaymentOptionResponse> paymentOptions = new List<PaymentOptionResponse>();
@@ -187,23 +181,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        isAuthenticated = await AuthService.IsAuthenticatedAsync();
-
-        if (!isAuthenticated)
-        {
-            isLoading = false;
-            return;
-        }
-
         var currentUser = await AuthService.GetCurrentUserAsync();
-        if (currentUser == null)
-        {
-            isAuthenticated = false;
-            isLoading = false;
-            return;
-        }
-
-        userId = currentUser.IdUser;
+        userId = currentUser!.IdUser;
 
         // Load payment options dan cart secara parallel
         var paymentTask = CartService.GetPaymentOptionsAsync();
