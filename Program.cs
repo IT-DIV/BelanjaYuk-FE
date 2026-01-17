@@ -34,4 +34,7 @@ builder.Services.AddScoped<CartService>();
 // Register TransactionService
 builder.Services.AddScoped<TransactionService>();
 
+// Register LookupService
+builder.Services.AddScoped<LookupService>();
+
 await builder.Build().RunAsync();

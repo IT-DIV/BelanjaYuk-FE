@@ -6,6 +6,7 @@
 @using Microsoft.Extensions.Configuration
 @inject AuthService AuthService
 @inject CartService CartService
+@inject LookupService LookupService
 @inject NavigationManager Navigation
 @inject IConfiguration Configuration
 
@@ -185,7 +186,7 @@
         userId = currentUser!.IdUser;
 
         // Load payment options dan cart secara parallel
-        var paymentTask = CartService.GetPaymentOptionsAsync();
+        var paymentTask = LookupService.GetPaymentOptionsAsync();
         var cartTask = LoadCart();
 
         await Task.WhenAll(paymentTask, cartTask);

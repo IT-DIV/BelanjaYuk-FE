@@ -1,7 +1,9 @@
 @page "/register"
 @using BelanjaYuk.Client.Services
 @using BelanjaYuk.Client.Models.Request
+@using BelanjaYuk.Client.Models.Response
 @inject AuthService AuthService
+@inject LookupService LookupService
 @inject NavigationManager Navigation
 
 <link rel="stylesheet" href="css/pages/register.css" />
@@ -83,8 +85,10 @@
                         <label for="gender">Jenis Kelamin</label>
                         <select id="gender" @bind="gender" class="form-input @(errors.ContainsKey("gender") ? "error" : "")">
                             <option value="">Pilih</option>
-                            <option value="GEN001">Laki-Laki</option>
-                            <option value="GEN002">Perempuan</option>
+                            @foreach (var g in genders)
+                            {
+                                <option value="@g.IdGender">@g.GenderName</option>
+                            }
                         </select>
                         @if (errors.ContainsKey("gender"))
                         {
@@ -272,6 +276,7 @@
     private bool agreePrivacy = false;
     private Dictionary<string, string> errors = new Dictionary<string, string>();
     private bool isSubmitting = false;
+    private List<GenderResponse> genders = new List<GenderResponse>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -279,6 +284,8 @@
         {
             Navigation.NavigateTo("/");
         }
+
+        genders = await LookupService.GetGendersAsync();
     }
 
     private void ToggleAddress()

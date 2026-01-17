@@ -4,7 +4,7 @@
 @using BelanjaYuk.Client.Components.Common
 @using Microsoft.Extensions.Configuration
 @inject AuthService AuthService
-@inject CategoryService CategoryService
+@inject LookupService LookupService
 @inject ProductService ProductService
 @inject CartService CartService
 @inject NavigationManager Navigation
@@ -150,7 +150,7 @@
             }
         }
 
-        categories = await CategoryService.GetCategoriesAsync();
+        categories = await LookupService.GetCategoriesAsync();
         await LoadProducts();
     }
 
@@ -186,10 +186,34 @@
         {
             await InvokeAsync(async () =>
             {
-                await LoadProducts();
+                if (IsSearchQueryValid())
+                {
+                    await LoadProducts();
+                }
                 StateHasChanged();
             });
         }, null, 500, System.Threading.Timeout.Infinite);
+    }
+
+    private bool IsSearchQueryValid()
+    {
+        // Allow empty search (show all)
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            return true;
+        }
+
+        // Trim whitespace for validation
+        var trimmed = searchQuery.Trim();
+
+        // Check if it contains at least one alphanumeric character
+        // This prevents searches with only special characters or spaces
+        if (!System.Text.RegularExpressions.Regex.IsMatch(trimmed, @"[a-zA-Z0-9]"))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private string GetImageUrl(string imagePath)
